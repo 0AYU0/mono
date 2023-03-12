@@ -82,7 +82,7 @@ fn children_of_expr (expr: &ExprT) -> Vec<&ExprT> {
   }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
   FuncV(Param, ExprT),
   CtorV(String, Box<Value>),

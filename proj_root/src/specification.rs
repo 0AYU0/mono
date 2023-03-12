@@ -22,7 +22,7 @@ type TypeContext = HashMap<String, T>;
 type TypeDefinition = HashMap<String, T>;
 type VariantContext = HashMap<String, (T, T)>;
 
-enum SpecT {
+pub enum SpecT {
   SynthType(T, T),
   EC(EvalContext),
   TC(TypeContext),
