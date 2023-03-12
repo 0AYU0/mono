@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 #[derive(PartialEq, Eq, PartialOrd, Debug)]
-enum T {
+pub enum T {
   Named(String),
   Arrow(Box<T>, Box<T>),
   Tuple(Vec<T>),
@@ -40,7 +40,7 @@ fn cmp_tuple(t1: T, t2: T) -> Option<std::cmp::Ordering> {
     }
 }
 
-type variants = Vec<(String, T)>;
+type Variants = Vec<(String, T)>;
 
 
 fn is_named_type(ty: T) -> bool { 
