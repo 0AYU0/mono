@@ -17,10 +17,10 @@ type t_unprocessed = string list (* import file list *)
 [@@deriving show]
 */
 
-type EvalContext = HashMap<String, ExprT>;
-type TypeContext = HashMap<String, T>;
-type TypeDefinition = HashMap<String, T>;
-type VariantContext = HashMap<String, (T, T)>;
+pub type EvalContext = HashMap<String, ExprT>;
+pub type TypeContext = HashMap<String, T>;
+pub type TypeDefinition = HashMap<String, T>;
+pub type VariantContext = HashMap<String, (T, T)>;
 
 pub enum SpecT {
   SynthType(T, T),

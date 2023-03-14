@@ -17,7 +17,7 @@ impl T {
         T::Named("t".to_string())
     }
 
-    fn _bool() -> T {
+    pub fn _bool() -> T {
         T::Named("bool".to_string())
     }
 

@@ -1,7 +1,7 @@
 use crate::types::T;
 
 static TARGET_FUNC: &'static str = "f";
-static TARGET_FUNC_ARG: &'static str = "x";
+pub static TARGET_FUNC_ARG: &'static str = "x";
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
 struct Param {
