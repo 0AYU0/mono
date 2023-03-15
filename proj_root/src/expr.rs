@@ -1,3 +1,6 @@
+use egg::LanguageChildren;
+use std::cmp::{min, max};
+
 use crate::types::T;
 
 pub static TARGET_FUNC: &'static str = "f";
@@ -56,9 +59,20 @@ fn depth(expr: &ExprT) -> i32 {
       ExprT::Ctor(_, e1) => depth(e1) + 1,
       ExprT::Unctor(_, e1) => depth(e1) + 1,
       ExprT::Eq(_, e1, e2) => max(depth(e1), depth(e2)) + 1,
-      ExprT::Match(e, patterns) => patterns.iter().fold(sizeof(e) + 1, |acc, (_, e1)| acc + sizeof(e1) + 1), // todo
+      ExprT::Match(e, patterns) => patterns.iter().fold(depth(e), |acc, (_, e1)| max(acc, depth(e1))) + 1, // todo
       ExprT::Fix(_, _, e) => depth(e) + 1,
-      ExprT::Tuple(es) => es.iter().fold(0, |acc, e1| acc + sizeof(e1)), // todo
+      ExprT::Tuple(es) => {
+        if es.is_empty(){
+          return 1;
+        } else {
+          let vec_depths = es.iter().map(|x| depth(x)).collect::<Vec<i32>>();
+          let max = vec_depths.iter().max();
+          match max {
+            Some(x) => *x,
+            _ => 0,
+          }
+        }
+      },
       ExprT::Proj(_, e) => depth(e) + 1,
   }
 }
