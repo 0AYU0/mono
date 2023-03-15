@@ -47,6 +47,22 @@ fn sizeof(expr: &ExprT) -> i32 {
   }
 }
 
+fn depth(expr: &ExprT) -> i32 {
+  match expr {
+      ExprT::Var(_) => 1,
+      ExprT::Wildcard => 1,
+      ExprT::App(e1, e2) => max(depth(e1), depth(e2)) + 1,
+      ExprT::Func(_, e1) => depth(e1) + 1,
+      ExprT::Ctor(_, e1) => depth(e1) + 1,
+      ExprT::Unctor(_, e1) => depth(e1) + 1,
+      ExprT::Eq(_, e1, e2) => max(depth(e1), depth(e2)) + 1,
+      ExprT::Match(e, patterns) => patterns.iter().fold(sizeof(e) + 1, |acc, (_, e1)| acc + sizeof(e1) + 1), // todo
+      ExprT::Fix(_, _, e) => depth(e) + 1,
+      ExprT::Tuple(es) => es.iter().fold(0, |acc, e1| acc + sizeof(e1)), // todo
+      ExprT::Proj(_, e) => depth(e) + 1,
+  }
+}
+
 
 fn contains_id (i: &String, expr: &ExprT) -> bool { 
 	match expr { 
