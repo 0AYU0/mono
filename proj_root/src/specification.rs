@@ -22,13 +22,27 @@ pub type TypeContext = HashMap<String, T>;
 pub type TypeDefinition = HashMap<String, T>;
 pub type VariantContext = HashMap<String, (T, T)>;
 
-pub enum SpecT {
-  SynthType(T, T),
-  EC(EvalContext),
-  TC(TypeContext),
-	TD(TypeDefinition),
-  VC(VariantContext),
-  Spec(Vec<(Value, Value)>),
+pub struct SpecT {
+  synth_type: (T, T),
+  ec: EvalContext,
+  tc: TypeContext,
+	td: TypeDefinition,
+  vc: VariantContext,
+  spec: Vec<(Value, Value)>,
+}
+
+impl SpecT {
+  // A public constructor method
+  pub fn new(synth_type: (T, T), ec: EvalContext, tc: TypeContext, td: TypeDefinition, vc: VariantContext, spec: Vec<(Value, Value)>) -> SpecT {
+    SpecT {
+          synth_type: synth_type,
+          ec: ec,
+          tc: tc,
+          td: td,
+          vc: vc,
+          spec: spec,
+      }
+  }
 }
 
 fn st_to_pair (synth_type: T) -> (T, T) {

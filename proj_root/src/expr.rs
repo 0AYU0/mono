@@ -1,6 +1,6 @@
 use crate::types::T;
 
-static TARGET_FUNC: &'static str = "f";
+pub static TARGET_FUNC: &'static str = "f";
 pub static TARGET_FUNC_ARG: &'static str = "x";
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
@@ -14,17 +14,15 @@ pub enum ExprT {
   Var(String),
   Wildcard,
   App(Box<ExprT>, Box<ExprT>),
-  Func(Param, Box<ExprT>), //should be Func(Param<Type.T>, T)
+  Func(Param, Box<ExprT>),
   Ctor(String, Box<ExprT>),
   Unctor(String, Box<ExprT>),
   Eq(bool, Box<ExprT>, Box<ExprT>),
   Match(Box<ExprT>, Vec<(Box<ExprT>, Box<ExprT>)>),
-  Fix(String, T, Box<ExprT>), //should be Fix(String, T, T)
+  Fix(String, T, Box<ExprT>),
   Tuple(Vec<Box<ExprT>>),
   Proj(i32, Box<ExprT>),
 }
-
-
 
 fn destruct_tuple (e: ExprT) -> Vec<Box<ExprT>> { 
 	match e {
@@ -80,6 +78,18 @@ fn children_of_expr (expr: &ExprT) -> Vec<&ExprT> {
     ExprT::Tuple (es) => es.iter().map(|x| x.as_ref()).collect(),
     ExprT::Proj (_, e) => vec![e],
   }
+}
+
+pub fn unit() -> ExprT {
+  return ExprT::Tuple(Vec::new());
+}
+
+pub fn true_() -> ExprT {
+  return ExprT::Ctor("True".to_string(), Box::new(unit()));
+}
+
+pub fn false_() -> ExprT {
+  return ExprT::Ctor("False".to_string(), Box::new(unit()));
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
