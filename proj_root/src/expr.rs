@@ -40,7 +40,7 @@ pub enum ExprT {
   Ctor(String, Box<ExprT>),
   Unctor(String, Box<ExprT>),
   Eq(bool, Box<ExprT>, Box<ExprT>),
-  Match(Box<ExprT>, Vec<(ExprT, ExprT)>),
+  Match(Box<ExprT>, Vec<(PatternT, ExprT)>),
   Fix(String, T, Box<ExprT>),
   Tuple(Vec<ExprT>),
   Proj(i32, Box<ExprT>),
