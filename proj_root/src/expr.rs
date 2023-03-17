@@ -7,6 +7,25 @@ pub static TARGET_FUNC: &'static str = "f";
 pub static TARGET_FUNC_ARG: &'static str = "x";
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
+pub enum PatternT {
+  Tuple(Vec<PatternT>),
+  Ctor(String, Box<PatternT>),
+  Var(String),
+  Wildcard,
+}
+
+impl PatternT {
+  fn contains_id (&self, i: &String) -> bool { 
+    match self {
+      PatternT::Tuple(ps) => ps.iter().any(|ty| ty.contains_id(i)),
+      PatternT::Ctor(_, p) => p.contains_id(i),
+      PatternT::Var(x) => x == i,
+      PatternT::Wildcard => false
+    }
+  }
+}
+
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
 struct Param {
   p_name: String,
   p_type: T,
@@ -21,13 +40,13 @@ pub enum ExprT {
   Ctor(String, Box<ExprT>),
   Unctor(String, Box<ExprT>),
   Eq(bool, Box<ExprT>, Box<ExprT>),
-  Match(Box<ExprT>, Vec<(Box<ExprT>, Box<ExprT>)>),
+  Match(Box<ExprT>, Vec<(ExprT, ExprT)>),
   Fix(String, T, Box<ExprT>),
-  Tuple(Vec<Box<ExprT>>),
+  Tuple(Vec<ExprT>),
   Proj(i32, Box<ExprT>),
 }
 
-fn destruct_tuple (e: ExprT) -> Vec<Box<ExprT>> { 
+fn destruct_tuple (e: ExprT) -> Vec<ExprT> { 
 	match e {
     ExprT::Tuple(es) => es,
     _ => Vec::new()
@@ -103,9 +122,9 @@ fn children_of_expr (expr: &ExprT) -> Vec<&ExprT> {
     ExprT::Ctor (_, e) => vec![e],
     ExprT::Unctor (_, e) => vec![e],
     ExprT::Eq(_, e1, e2) => vec![e1, e2],
-    ExprT::Match (_, patterns) => patterns.iter().map(|(_, e1)| e1.as_ref()).collect(),
+    ExprT::Match (_, patterns) => patterns.iter().map(|(_, e1)| e1).collect(),
     ExprT::Fix (_, _, e) => vec![e],
-    ExprT::Tuple (es) => es.iter().map(|x| x.as_ref()).collect(),
+    ExprT::Tuple (es) => es.iter().map(|x| x).collect(),
     ExprT::Proj (_, e) => vec![e],
   }
 }
@@ -126,7 +145,7 @@ pub fn false_() -> ExprT {
 pub enum Value {
   FuncV(Param, ExprT),
   CtorV(String, Box<Value>),
-  TupleV(Vec<Box<Value>>),
+  TupleV(Vec<Value>),
   WildcardV,
   Bot
 }
