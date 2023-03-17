@@ -26,8 +26,8 @@ pub struct SpecT {
   synth_type: (T, T),
   ec: EvalContext,
   tc: TypeContext,
-	td: TypeDefinition,
-  vc: VariantContext,
+	pub td: TypeDefinition,
+  pub vc: VariantContext,
   spec: Vec<(Value, Value)>,
 }
 

@@ -1,90 +1,106 @@
 use crate::expr::Value::{*, self};
 use crate::expr::ExprT::{*, self};
 use crate::expr::{*};
+use crate::types::{*};
+use crate::types::T::{*, self};
 use crate::specification::{*};
+use std::collections::BTreeSet;
 
-pub fn growApp(bank: Vec<ExprT>, spec: SpecT) -> Vec<ExprT> {
-  let mut newBank: Vec<ExprT> = Vec::new();
+pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+  let mut new_bank: Vec<ExprT> = Vec::new();
   for component_one in bank.iter() {
     for component_two in bank.iter() {   
-        newBank.append(ExprT::App(component_one, component_two));
+        new_bank.push(ExprT::App(Box::new(component_one.clone()), Box::new(component_two.clone())));
     }
   }
-  return newBank;
+  return new_bank;
 }
 
-pub fn growCtor(bank: Vec<ExprT>, spec: SpecT) -> Vec<ExprT> {
-  let mut type_defs: TypeDefinition = spec.td;
+pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+  let variant_context: &VariantContext = &spec.vc;
+  let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
+  for (_, (arg_ty, parent_ty)) in variant_context {
+    result_ty_arg_tys_arg_expss_set.insert((parent_ty.clone(), vec![arg_ty.clone()], Vec::new()));
+  }
+
+  /*let type_defs: &TypeDefinition = &spec.td;
 
   // Find all Variants that are constructors
-  let mut ctor_types: Vec((String, T)) = Vec::new();
+  let mut ctor_types: Vec<(String, T)> = Vec::new();
   for (_, v) in type_defs.iter() {
     match v {
       Variant(vec) => {
         for (s1, t1) in vec.iter(){
           match t1 {
-            Named(_) => ctor_types.append((s1, t1)),
+            Named(_) => ctor_types.push((s1.to_string(), t1.clone())),
             _ => continue,
           }
         }
       },
       _ => continue,
     }
-  }
+  }*/
 
-  let mut expressionBank: Vec<ExprT> = Vec::new();
+  let mut expression_bank: Vec<ExprT> = Vec::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
-  for t in ctor_types.iter() {
+  for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
     for component in bank.iter() {
-      match t {
-        (s1, Named(_)) => expressionBank.append(ExprT::Ctor(s1, component)),
+      match (s1, (arg_ty, parent_ty)) {
+        (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone()))),
         _ => continue,
       }
     }
   }
-  return expressionBank;
+  return expression_bank;
 }
 
-pub fn growUnctor(bank: Vec<ExprT>, spec: SpecT) -> Vec<ExprT> {
-  let mut type_defs: TypeDefinition = spec.td;
+pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+  let variant_context: &VariantContext = &spec.vc; 
+  let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
+  for (_, (arg_ty, parent_ty)) in variant_context {
+    result_ty_arg_tys_arg_expss_set.insert((parent_ty.clone(), vec![arg_ty.clone()], Vec::new()));
+  }
+
+  /*let type_defs: &TypeDefinition = &spec.td;
 
   // Find all Variants that are constructors
-  let mut ctor_types: Vec((String, T)) = Vec::new();
+  let mut ctor_types: Vec<(String, T)> = Vec::new();
   for (_, v) in type_defs.iter() {
     match v {
       Variant(vec) => {
         for (s1, t1) in vec.iter(){
           match t1 {
-            Named(_) => ctor_types.append((s1, t1)),
+            Named(_) => ctor_types.push((s1.to_string(), t1.clone())),
             _ => continue,
           }
         }
       },
       _ => continue,
     }
-  }
+  }*/
 
-  let mut expressionBank: Vec<ExprT> = Vec::new();
+  let mut expression_bank: Vec<ExprT> = Vec::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
-  for t in ctor_types.iter() {
+  for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
     for component in bank.iter() {
-      match t {
-        (s1, Named(_)) => expressionBank.append(ExprT::Unctor(s1, component)),
+      match (s1, (arg_ty, parent_ty)) {
+        (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Unctor(s1.to_string(), Box::new(component.clone()))),
         _ => continue,
       }
     }
   }
-  return expressionBank;
+  return expression_bank;
 }
 
-pub fn growEq(bank: Vec<ExprT>, spec: SpecT) -> Vec<ExprT> {
-  let mut newBank: Vec<ExprT> = Vec::new();
+/*This may not actually have to do anything - in trio it just returns the exact same 'bank' or mapping of expressions */
+pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+  let mut new_bank: Vec<ExprT> = Vec::new();
   for component_one in bank.iter() {
     for component_two in bank.iter() {   
-        newBank.append(ExprT::Eq(true, component_one, component_two));
-        newBank.append(ExprT::Eq(false, component_one, component_two));
+        new_bank.push(ExprT::Eq(true, Box::new(component_one.clone()), Box::new(component_two.clone())));
+        new_bank.push(ExprT::Eq(false, Box::new(component_one.clone()), Box::new(component_two.clone())));
     }
   }
-  return newBank;
+  return new_bank;
 }
 
