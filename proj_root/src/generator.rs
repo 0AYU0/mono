@@ -7,6 +7,14 @@ use crate::specification::{*};
 use std::collections::BTreeSet;
 
 pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+  //Filters out all arrow functions
+  let type_context: &mut TypeContext = &mut (spec.tc).clone();
+  type_context.retain(|_, v| is_arrow_type((*v).clone()));
+  /*let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
+  for (_, (arg_ty, parent_ty)) in type_context {
+    result_ty_arg_tys_arg_expss_set.insert((parent_ty.clone(), vec![arg_ty.clone()], Vec::new()));
+  }*/
+
   let mut new_bank: Vec<ExprT> = Vec::new();
   for component_one in bank.iter() {
     for component_two in bank.iter() {   

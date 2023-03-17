@@ -50,7 +50,7 @@ fn is_named_type(ty: T) -> bool {
     }
 }
 	
-fn is_arrow_type(ty: T) -> bool { 
+pub fn is_arrow_type(ty: T) -> bool { 
 	match ty {
         T::Arrow(_, _) => true,
         _ => false,
