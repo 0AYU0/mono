@@ -26,7 +26,7 @@ pub fn get_type_definition() -> TypeDefinition {
 }
 
 pub fn get_variant_context() -> VariantContext {
-  return HashMap::new();
+  return HashMap::from([("True".to_string(), (T::Tuple(Vec::new()), Named("Bool".to_string()))), ("False".to_string(), (T::Tuple(Vec::new()), Named("Bool".to_string())))]);
 }
 
 pub fn get_synth_examples() -> Vec<(Value, Value)> {

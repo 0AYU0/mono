@@ -11,7 +11,7 @@ use crate::specification::{*};
 use crate::generator::{*};
 
 fn main() {
-  let mut plist: Vec<ExprT> = vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()), true_(), false_()];
+  let mut plist: Vec<ExprT> = vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string())];
   let max_depth: i32 = 4;
   let (input_values, desired_type): (T, T) = (get_synth_type().0, get_synth_type().1);
   let mut tc: TypeContext = get_type_context();
@@ -19,7 +19,8 @@ fn main() {
   tc.insert(TARGET_FUNC_ARG.to_string(), input_values.clone());
   let spec: SpecT = specification::SpecT::new(get_synth_type(), get_eval_context(), get_type_context(), get_type_definition(), get_variant_context(), get_synth_examples());
   let grow_funcs: Vec<fn(&Vec<ExprT>, &SpecT) -> Vec<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq];
-  for curr_depth in 1..max_depth {
+  for curr_depth in 1..2 {
     plist = grow_funcs.iter().fold(plist.clone(), |acc, grow_func| [acc, grow_func(&plist, &spec)].concat());
+    print!("{:?}", plist);
   }
 }

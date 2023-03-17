@@ -53,10 +53,13 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
     for component in bank.iter() {
-      match (s1, (arg_ty, parent_ty)) {
+      if *component == ExprT::Tuple(Vec::new()) {
+        expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone())));
+      }
+      /*match (s1, (arg_ty, parent_ty)) {
         (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone()))),
         _ => continue,
-      }
+      }*/
     }
   }
   return expression_bank;
@@ -109,6 +112,6 @@ pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
         new_bank.push(ExprT::Eq(false, Box::new(component_one.clone()), Box::new(component_two.clone())));
     }
   }
-  return new_bank;
+  return Vec::new();
 }
 
