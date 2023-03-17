@@ -141,6 +141,20 @@ pub fn false_() -> ExprT {
   return ExprT::Ctor("False".to_string(), Box::new(unit()));
 }
 
+pub fn is_ctor_exp(t: ExprT) -> bool {
+	match t { 
+    ExprT::Ctor(_, _) => true,
+	  _ => false 
+  }
+}
+
+pub fn is_unctor_exp(t: ExprT) -> bool {
+	match t { 
+    ExprT::Unctor(_, _) => true,
+	  _ => false 
+  }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
   FuncV(Param, ExprT),
