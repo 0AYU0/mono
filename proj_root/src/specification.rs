@@ -23,7 +23,7 @@ pub type TypeDefinition = HashMap<String, T>;
 pub type VariantContext = HashMap<String, (T, T)>;
 
 pub struct SpecT {
-  synth_type: (T, T),
+  pub synth_type: (T, T),
   ec: EvalContext,
   pub tc: TypeContext,
 	pub td: TypeDefinition,

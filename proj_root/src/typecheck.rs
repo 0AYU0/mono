@@ -113,5 +113,6 @@ pub fn typecheck(ec: &EvalContext, tc: &TypeContext, td: &TypeDefinition, vc: &V
         None
       }
     },
+    _ => None,
   }
 }

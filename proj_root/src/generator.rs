@@ -139,4 +139,32 @@ pub fn grow_tuple_helper(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32, curr_
   return grow_tuple_helper(bank, spec, curr_depth - 1, new_tuples); 
 }
 
+pub fn grow_proj(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+  let mut new_bank: Vec<ExprT> = Vec::new(); 
+  if curr_depth == 1{
+    let input_ty = &spec.synth_type.0;
+    match input_ty {
+      T::Tuple(vec) => {
+        for size in 0..vec.len() {
+          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))))
+        }
+      },
+      _ => ()
+    }
+    return new_bank;
+  }
+  for component in bank.iter() {
+    match component {
+      ExprT::Tuple(vec) => {
+        for size in 0..vec.len() {
+          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))))
+        }
+      }
+      _ => ()
+    }
+  }
+  return new_bank;
+
+}
+
 
