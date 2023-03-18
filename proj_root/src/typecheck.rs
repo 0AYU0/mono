@@ -62,14 +62,14 @@ pub fn typecheck(ec: &EvalContext, tc: &TypeContext, td: &TypeDefinition, vc: &V
                 Arrow(_, t12) => Some(*t12),
                 _ => None,
             }
-        })
+        }).unwrap()
     },
     ExprT::Func(param, e) => {
       let name = param.p_name;
       let ty = param.p_type;
       let mut _tc = tc.clone();
       _tc.insert(name, ty.clone());
-      let t1 = typecheck(ec, tc, td, vc, *e);
+      let t1 = typecheck(ec, &_tc, td, vc, *e);
       match t1 {
         Some(x) => Some(Arrow(Box::new(ty), Box::new(x))),
         _ => None,
@@ -82,6 +82,36 @@ pub fn typecheck(ec: &EvalContext, tc: &TypeContext, td: &TypeDefinition, vc: &V
         _ => None,
       }
     },
-    _ => todo!()
+    ExprT::Match(e, branches) => {
+      let t = concretify(td, &typecheck(ec, tc, td, vc, *e).unwrap());
+      let ts: Vec<Option<T>> = branches.iter().map(|(p, e)| {
+        let its = typecheck_pattern(td, p, &t);
+        let mut _tc = tc.clone();
+        match its {
+          Some(its_add) => {
+            its_add.iter().map(|(k,v)| _tc.insert(k.to_string(),*v));
+            typecheck(ec, &_tc, td, vc, *e)
+          },
+          _ => None
+        }
+      }).collect();
+      *(ts.get(0).unwrap())
+    },
+    ExprT::Fix(i, t, e) => {
+      let mut _tc = tc.clone();
+      _tc.insert(i, t);
+      typecheck(ec, &_tc, td, vc, *e)
+    },
+    ExprT::Tuple(es) => {
+      Some(T::Tuple(es.iter().map(|e| typecheck(ec, tc, td, vc, *e).unwrap()).collect()))
+    },
+    ExprT::Proj(i, e) => {
+      let t = concretify(td, &typecheck(ec, tc, td, vc, *e).unwrap());
+      if let T::Tuple(ts) = t {
+        Some(ts[i as usize])
+      } else {
+        None
+      }
+    },
   }
 }
