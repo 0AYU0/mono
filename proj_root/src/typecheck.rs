@@ -1,37 +1,48 @@
 use crate::specification::{*};
 use crate::expr::ExprT;
 use crate::types::T::{*, self};
+use crate::types::{*};
 
-pub fn concretify(td: TypeDefinition, t: T) -> T{
+pub fn concretify(td: &TypeDefinition, t: &T) -> T{
   match t {
     Named(s) => {
-      if (td.contains_key(s)) {
-        return concretify(td, td.get(s));
-      } else { return t;}
+      match td.get(s) {
+        Some(k) => concretify(td, &k),
+        _ => *t,
+      }
     },
-    _ => t
+    _ => *t
   }
 }
 
-pub fn typecheck(ec: EvalContext, tc: TypeContext, td: TypeDeclaration, vc:VariantContext, e: ExprT) {
+pub fn typecheck(ec: EvalContext, tc: TypeContext, td: &TypeDefinition, vc:VariantContext, e: ExprT) -> Option<T> {
   match e {
-    Wildcard => printf("not typeable: {:?}", e),
-    Unctor(i, _) => {
-      if !vc.contains_key(i) {
-        printf("typecheck error: unctor: {:?}", i)
-      } else {
-        vc.get(i).first()
+    ExprT::Wildcard => None,
+    ExprT::Unctor(i, _) => {
+        match vc.get(&i) {
+          Some((t1, _)) => Some(*t1),
+          _ => None,
+        }
+    },
+    ExprT::Var(s) => {
+      match tc.get(&s) {
+        Some(t1) => Some(*t1),
+        _ => None,
       }
     },
-    Var(s) => {
-      if !tc.contains_key(s) {
-        printf("typecheck error: var: {:?}", s)
-      } else {
-        get(s)
+    ExprT::App(e1, e2) => {
+      let exprT1 = typecheck(ec, tc, td, vc, *e1);
+      match exprT1 {
+        Some(t) => {
+          let t1 = concretify(td, &t);
+          if let Arrow(t11, t12) = t1 {
+            Some(*t12)
+          } else {
+            None
+          }
+        },
+        _ => None,
       }
-    },
-    App(e1, e2) => {
-      let t1 = concretify(td, typecheck(ec, tc, td, vc, e1));
     }
   }
 }

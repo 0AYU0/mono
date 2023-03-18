@@ -70,3 +70,10 @@ fn is_variant_type(ty: T) -> bool {
         _ => false,
     }
 }
+
+pub fn destruct_arrow(ty: T) -> Option<(T, T)> { 
+	match ty {
+	  T::Arrow (t1, t2) => Some((*t1, *t2)), 
+	  _ => None
+  }
+}

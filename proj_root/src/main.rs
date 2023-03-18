@@ -3,6 +3,7 @@ mod types;
 mod specification;
 mod bool_band;
 mod generator;
+mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
 use crate::bool_band::{*};
