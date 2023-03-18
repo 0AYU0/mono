@@ -157,7 +157,7 @@ pub fn grow_proj(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
     match component {
       ExprT::Tuple(vec) => {
         for size in 0..vec.len() {
-          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))))
+          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(component.clone())))
         }
       }
       _ => ()
