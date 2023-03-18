@@ -26,9 +26,9 @@ impl PatternT {
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
-struct Param {
-  p_name: String,
-  p_type: T,
+pub struct Param {
+  pub p_name: String,
+  pub p_type: T,
 }
 
 #[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
