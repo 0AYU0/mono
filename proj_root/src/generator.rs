@@ -6,7 +6,7 @@ use crate::types::T::{*, self};
 use crate::specification::{*};
 use std::collections::BTreeSet;
 
-pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   //Filters out all arrow functions
   let type_context: &mut TypeContext = &mut (spec.tc).clone();
   type_context.retain(|_, v| is_arrow_type((*v).clone()));
@@ -24,7 +24,7 @@ pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
   return new_bank;
 }
 
-pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   let variant_context: &VariantContext = &spec.vc;
   let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
   for (_, (arg_ty, parent_ty)) in variant_context {
@@ -65,7 +65,7 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
   return expression_bank;
 }
 
-pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   let variant_context: &VariantContext = &spec.vc; 
   let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
   for (_, (arg_ty, parent_ty)) in variant_context {
@@ -104,7 +104,7 @@ pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
 }
 
 /*This may not actually have to do anything - in trio it just returns the exact same 'bank' or mapping of expressions */
-pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
+pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   let mut new_bank: Vec<ExprT> = Vec::new();
   for component_one in bank.iter() {
     for component_two in bank.iter() {   
@@ -114,4 +114,29 @@ pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT) -> Vec<ExprT> {
   }
   return Vec::new();
 }
+
+pub fn grow_tuple(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+  let mut new_bank: Vec<ExprT> = Vec::new();
+  let vector_tuples = grow_tuple_helper(bank, spec, curr_depth, vec![Vec::new()]); 
+  for vec in vector_tuples.iter() {
+    new_bank.push(ExprT::Tuple(vec.to_vec()));
+  }
+  return new_bank;
+}
+
+pub fn grow_tuple_helper(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32, curr_tuples: Vec<Vec<ExprT>>) -> Vec<Vec<ExprT>> {
+  if curr_depth == 0 {
+    return curr_tuples;
+  }
+  let mut new_tuples = Vec::new();
+  for component in bank.iter() {
+    for tuple in curr_tuples.iter() {
+      let mut t1: Vec<ExprT> = tuple.clone();
+      t1.push(component.clone());
+      new_tuples.push(t1);
+    }
+  }
+  return grow_tuple_helper(bank, spec, curr_depth - 1, new_tuples); 
+}
+
 
