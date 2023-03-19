@@ -4,6 +4,7 @@ use crate::expr::{*};
 use crate::types::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
+use crate::typecheck::{*};
 use std::collections::BTreeSet;
 
 pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
@@ -52,9 +53,15 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
   let mut expression_bank: Vec<ExprT> = Vec::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
-    for component in bank.iter() {
-      if *component == ExprT::Tuple(Vec::new()) {
-        expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone())));
+    for expr in bank.iter() {
+      let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
+      match ty {
+        Some(s_ty) => {
+          if *arg_ty == s_ty {
+          expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
+          }
+        }
+        None => print!("Typecheck failed on: {:?}\n", *expr),
       }
       /*match (s1, (arg_ty, parent_ty)) {
         (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone()))),
@@ -93,10 +100,15 @@ pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<Expr
   let mut expression_bank: Vec<ExprT> = Vec::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
-    for component in bank.iter() {
-      match (s1, (arg_ty, parent_ty)) {
-        (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Unctor(s1.to_string(), Box::new(component.clone()))),
-        _ => continue,
+    for expr in bank.iter() {
+      let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
+      match ty {
+        Some(s_ty) => {if s_ty == *parent_ty && !(*arg_ty == T::_unit()){
+          expression_bank.push(ExprT::Unctor(s1.to_string(), Box::new(expr.clone())))
+          }
+          //print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
+        },
+        None => print!("Typecheck failed on: {:?}\n", *expr),
       }
     }
   }

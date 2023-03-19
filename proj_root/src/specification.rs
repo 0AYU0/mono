@@ -24,11 +24,11 @@ pub type VariantContext = HashMap<String, (T, T)>;
 
 pub struct SpecT {
   pub synth_type: (T, T),
-  ec: EvalContext,
+  pub ec: EvalContext,
   pub tc: TypeContext,
 	pub td: TypeDefinition,
   pub vc: VariantContext,
-  spec: Vec<(Value, Value)>,
+  pub spec: Vec<(Value, Value)>,
 }
 
 impl SpecT {

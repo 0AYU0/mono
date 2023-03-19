@@ -9,7 +9,7 @@ pub enum T {
 }
 
 impl T {
-    fn _unit() -> T {
+    pub fn _unit() -> T {
         T::Tuple(vec![])
     }
 
