@@ -9,18 +9,37 @@ use std::collections::BTreeSet;
 
 pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   //Filters out all arrow functions
-  let type_context: &mut TypeContext = &mut (spec.tc).clone();
+  /*let type_context: &mut TypeContext = &mut (spec.tc).clone();
   type_context.retain(|_, v| is_arrow_type((*v).clone()));
-  /*let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
+  let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
   for (_, (arg_ty, parent_ty)) in type_context {
     result_ty_arg_tys_arg_expss_set.insert((parent_ty.clone(), vec![arg_ty.clone()], Vec::new()));
   }*/
 
   let mut new_bank: Vec<ExprT> = Vec::new();
-  for component_one in bank.iter() {
-    for component_two in bank.iter() {   
-        new_bank.push(ExprT::App(Box::new(component_one.clone()), Box::new(component_two.clone())));
-    }
+  for expr1 in bank.iter() {
+    let t1: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr1);
+      match t1 {
+        Some(r_t1) => {
+          match r_t1 {
+            Arrow(arg_ty, _) => {
+              for expr2 in bank.iter() {   
+                let t2: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr2);
+                match t2 {
+                  Some(r_t2) => { 
+                    if *arg_ty == r_t2 {
+                      new_bank.push(ExprT::App(Box::new(expr1.clone()), Box::new(expr2.clone())));
+                    }
+                  },
+                  _ => ()
+                }          
+              }
+            },
+            _ => ()
+          }
+        },
+        None => print!("Typecheck failed on: {:?}\n", *expr1),
+      } 
   }
   return new_bank;
 }
