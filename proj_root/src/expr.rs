@@ -15,7 +15,7 @@ pub enum PatternT {
 }
 
 impl PatternT {
-  fn contains_id (&self, i: &String) -> bool { 
+  pub fn contains_id (&self, i: &String) -> bool { 
     match self {
       PatternT::Tuple(ps) => ps.iter().any(|ty| ty.contains_id(i)),
       PatternT::Ctor(_, p) => p.contains_id(i),
@@ -168,4 +168,95 @@ pub enum Value {
 pub enum Declaration {
   TypeDeclaration(String, T),
   ExprDeclaration(String, Box<Declaration>)
+}
+
+pub fn exp_of_value(v:Value) -> Option<ExprT> {
+  match v {
+    Value::FuncV (p, e) => Some(ExprT::Func (p, Box::new(e))),
+    Value::CtorV (i, v) => {
+      let res = exp_of_value(*v);
+      match res {
+        Some(r) => Some(ExprT::Ctor(i, Box::new(r))),
+        _ => None
+      }
+    },
+    Value::WildcardV => Some(ExprT::Wildcard),
+    Value::TupleV(vs) => {
+      let res = vs.iter().map(|v| exp_of_value(v.clone())).collect();
+      match res {
+        Some(r) =>  Some(ExprT::Tuple (r)),
+        _ => None
+      }
+    },
+    Value::Bot => None
+  }
+}
+
+fn replace(i: &str, e_with: ExprT, e: ExprT) -> ExprT {
+    let replace_simple = |e: ExprT| replace(i, e_with.clone(), e);
+    let e_orig = e.clone();
+    match e {
+        ExprT::Wildcard => e,
+        ExprT::Eq(b, e1, e2) => ExprT::Eq(b, Box::new(replace_simple(*e1)), Box::new(replace_simple(*e2))),
+        ExprT::Var(i_) => {
+            if i == i_ {
+                e_with
+            } else {
+                e_orig
+            }
+        }
+        ExprT::App(e1, e2) => ExprT::App(Box::new(replace_simple(*e1)), Box::new(replace_simple(*e2))),
+        ExprT::Func(Param{p_name: i_, p_type: t}, e_) => {
+            if i == i_ {
+                e_orig
+            } else {
+                ExprT::Func(Param{p_name: i_, p_type: t}, Box::new(replace_simple(*e_)))
+            }
+        }
+        ExprT::Ctor(i_, e_) => ExprT::Ctor(i_, Box::new(replace_simple(*e_))),
+        ExprT::Unctor(i_, e_) => ExprT::Unctor(i_, Box::new(replace_simple(*e_))),
+        ExprT::Match(e_, branches) => {
+            let branches = branches
+                .into_iter()
+                .map(|(p, e)| {
+                    if p.contains_id(&i.to_string()) {
+                        (p, e)
+                    } else {
+                        (p, replace_simple(e))
+                    }
+                })
+                .collect();
+              ExprT::Match(Box::new(replace_simple(*e_)), branches)
+        }
+        ExprT::Fix(i_, t, e_) => {
+            if i == i_ {
+                e_orig
+            } else {
+              ExprT::Fix(i_, t, Box::new(replace_simple(*e_)))
+            }
+        }
+        ExprT::Tuple(es) => ExprT::Tuple(es.into_iter().map(replace_simple).collect()),
+        ExprT::Proj(i_, e_) => ExprT::Proj(i_, Box::new(replace_simple(*e_))),
+    }
+}
+
+pub fn evaluate(e: ExprT) -> Option<Value> {
+    match e {
+      ExprT::Wildcard => Some(Value::WildcardV),
+      ExprT::Var(i) => None,
+      ExprT::App(e1, e2) => {
+        let v1 = evaluate(*e1)?;
+        let expr = exp_of_value(v1)?;
+        match expr {
+          ExprT::Func(Param{p_name: i, ..}, exp1) => {
+            let v2 = evaluate(*e2)?;
+            let expr2 = exp_of_value(v2)?;
+            evaluate(replace(&i, expr2, *exp1))
+          },
+          ExprT::Wildcard => Some(Value::WildcardV),
+          _ => None
+        }
+      },
+      _ => todo!()
+    }
 }
