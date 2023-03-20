@@ -1,7 +1,7 @@
 use crate::types::T;
 use crate::types::T::*;
 use crate::expr::ExprT;
-use crate::expr::Value;
+use crate::expr::{*};
 use std::collections::HashMap;
 
 type UnprocessedSpec = Vec<(Vec<ExprT>, ExprT)>;
@@ -80,4 +80,36 @@ fn extract_variants (t: T) -> Vec<(String, T)>{
       return vs.iter().fold(clone, | acc, (_, ty)| [acc, extract_variants((*ty).clone())].concat())
     }
   }
+}
+
+pub fn expected_sig (spec: &SpecT) -> Vec<Value> {
+  let mut output_bank: Vec<Value> = Vec::new();
+  return output_bank;
+}
+
+pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<((Value, Value), Vec<ExprT>)> {
+  let io_examples: &Vec<(Value, Value)>= &spec.spec;
+  let mut processed_spec: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
+  for test in io_examples.iter() {
+    processed_spec.push((test.clone(), Vec::new()));
+  } 
+  for expr in bank.iter(){
+    print!("Currently evaluating {:?}\n", expr);
+    let result: Option<Value> = evaluate(expr.clone());
+    let mut index = 0;
+    match result {
+      Some(r1) => {
+        print!("Reached result {:?}\n", r1);
+        for test in io_examples.iter() {
+          if r1 == test.1 {
+            processed_spec[index].1.push(expr.clone());
+            print!("{:?} satisfies IO example {:?}\n", expr, test);
+          }
+          index += 1;
+        }
+      },
+      _ => ()      
+    }
+  }
+  return processed_spec;
 }

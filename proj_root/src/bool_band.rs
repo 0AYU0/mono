@@ -32,9 +32,9 @@ pub fn get_variant_context() -> VariantContext {
 pub fn get_synth_examples() -> Vec<(Value, Value)> {
   let true_v: Value = CtorV("True".to_string(), Box::new(TupleV(Vec::new())));
   let false_v: Value = CtorV("False".to_string(), Box::new(TupleV(Vec::new())));
-  let first = (TupleV(vec![true_v.clone(), true_v.clone()]), true_v.clone());
-  let second = (TupleV(vec![true_v.clone(), false_v.clone()]), false_v.clone());
-  let third = (TupleV(vec![false_v.clone(), true_v.clone()]), false_v.clone());
-  let fourth = (TupleV(vec![false_v.clone(), false_v.clone()]), false_v.clone());
+  let first: (Value, Value) = (TupleV(vec![true_v.clone(), true_v.clone()]), true_v.clone());
+  let second: (Value, Value) = (TupleV(vec![true_v.clone(), false_v.clone()]), false_v.clone());
+  let third: (Value, Value) = (TupleV(vec![false_v.clone(), true_v.clone()]), false_v.clone());
+  let fourth: (Value, Value) = (TupleV(vec![false_v.clone(), false_v.clone()]), false_v.clone());
   return vec![first, second, third, fourth];
 }

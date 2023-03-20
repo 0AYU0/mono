@@ -1,11 +1,17 @@
 use crate::expr::Value::{*, self};
 use crate::expr::ExprT::{*, self};
-use crate::expr::{*};
+use crate::expr::{*, self};
 use crate::types::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::typecheck::{*};
 use std::collections::BTreeSet;
+
+pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
+  let (arg_ty, out_ty): (T, T) = spec.synth_type;
+  let func = ExprT::Func(Param { p_name: TARGET_FUNC_ARG.to_string(), p_type: arg_ty.clone() }, Box::new(e));
+  return ExprT::Fix(TARGET_FUNC.to_string(), T::Arrow(Box::new(arg_ty), Box::new(out_ty)), Box::new(func));
+}
 
 pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   //Filters out all arrow functions
@@ -41,6 +47,7 @@ pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> 
         None => print!("Typecheck failed on: {:?}\n", *expr1),
       } 
   }
+  //print!("{:?} at iteration {:?}\n", new_bank, curr_depth);
   return new_bank;
 }
 
@@ -148,7 +155,7 @@ pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
 
 pub fn grow_tuple(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   let mut new_bank: Vec<ExprT> = Vec::new();
-  let vector_tuples = grow_tuple_helper(bank, spec, curr_depth, vec![Vec::new()]); 
+  let vector_tuples: Vec<Vec<ExprT>> = grow_tuple_helper(bank, spec, curr_depth, vec![Vec::new()]); 
   for vec in vector_tuples.iter() {
     new_bank.push(ExprT::Tuple(vec.to_vec()));
   }
@@ -159,7 +166,7 @@ pub fn grow_tuple_helper(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32, curr_
   if curr_depth == 0 {
     return curr_tuples;
   }
-  let mut new_tuples = Vec::new();
+  let mut new_tuples: Vec<Vec<ExprT>> = Vec::new();
   for component in bank.iter() {
     for tuple in curr_tuples.iter() {
       let mut t1: Vec<ExprT> = tuple.clone();
@@ -173,7 +180,7 @@ pub fn grow_tuple_helper(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32, curr_
 pub fn grow_proj(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
   let mut new_bank: Vec<ExprT> = Vec::new(); 
   if curr_depth == 1{
-    let input_ty = &spec.synth_type.0;
+    let input_ty: &T = &spec.synth_type.0;
     match input_ty {
       T::Tuple(vec) => {
         for size in 0..vec.len() {

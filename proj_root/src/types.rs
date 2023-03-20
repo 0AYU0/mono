@@ -44,36 +44,36 @@ type Variants = Vec<(String, T)>;
 
 
 fn is_named_type(ty: T) -> bool { 
-	match ty {
+	  match ty {
         T::Named(_) => true, 
         _ => false,
     }
 }
 	
 pub fn is_arrow_type(ty: T) -> bool { 
-	match ty {
+	  match ty {
         T::Arrow(_, _) => true,
         _ => false,
     }
 }
 
 fn is_tuple_type(ty: T) -> bool { 
-	match ty { 
+	  match ty { 
         T::Tuple(_) => true,
         _ => false,
     }
 }
 
 fn is_variant_type(ty: T) -> bool { 
-	match ty { 
+	  match ty { 
         T::Variant(_) => true,
         _ => false,
     }
 }
 
 pub fn destruct_arrow(ty: T) -> Option<(T, T)> { 
-	match ty {
-	  T::Arrow (t1, t2) => Some((*t1, *t2)), 
-	  _ => None
-  }
+	  match ty {
+	      T::Arrow (t1, t2) => Some((*t1, *t2)), 
+	      _ => None
+    }
 }
