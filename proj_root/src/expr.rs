@@ -339,14 +339,16 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
       evaluate(replace(&i, e_cop, *e2))
     },
     ExprT::Tuple(es) => {
-      let vs = es.iter().map(|s| evaluate(s.clone()).unwrap()).collect();
+      let vs = es.iter().filter_map(|s| evaluate(s.clone())).collect();
       Some(Value::TupleV(vs))
     },
     ExprT::Proj(i, e) => {
       let v = evaluate(*e)?;
       match v {
         Value::WildcardV => Some(Value::WildcardV),
-        Value::TupleV(vs) => Some(vs[i as usize].clone()),
+        Value::TupleV(vs) => {
+          if vs.len() > 0 { Some(vs[i as usize].clone()) } else { None }
+        },
         _ => None
       }
     },
@@ -360,6 +362,5 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
         _ => None
       }
     }
-      _ => todo!()
-    }
+  }
 }
