@@ -372,10 +372,5 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
 
 pub fn evaluate_with_context(eval_context:EvalContext, e:ExprT) -> Option<Value> {
 	let e = replace_holes(eval_context, e);
-  let e2 = e.clone();
-  match e2 {
-    ExprT::Proj(x, y) => print!("Proj({:?}, {:?})", x, y),
-    _ => (),
-  }
   evaluate(e)
 }

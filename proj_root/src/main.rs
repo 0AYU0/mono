@@ -26,12 +26,12 @@ fn main() {
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
   //print!("{:?}\n", plist);
   for curr_depth in 1..max_depth {
-    print!("Iteration: {:?}", curr_depth);
+    //print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |acc, grow_func| [acc, grow_func(&plist, &spec, curr_depth)].concat());
     satisfying_blocks = process_spec(&spec, &plist);
     //print!("Plist: {:?}\n", plist);
     for block in satisfying_blocks.iter() {
-      print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
+      //print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
     }
   }
 }

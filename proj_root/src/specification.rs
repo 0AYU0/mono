@@ -135,7 +135,7 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<((Value, Value), Ve
           //print!("Reached result {:?}\n", r1);
           if r1 == test.1 {
             (processed_spec[index]).1.push(expr.clone());
-            //print!("{:?} satisfies IO example {:?}\n", expr, test);
+            print!("{:?} satisfies IO example {:?}\n\n", expr, test);
           }
         },
         _ => ()      
