@@ -185,7 +185,7 @@ pub enum Value {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Declaration {
   TypeDeclaration(String, T),
-  ExprDeclaration(String, Box<Declaration>)
+  ExprDeclaration(String, ExprT)
 }
 
 pub fn exp_of_value(v:Value) -> Option<ExprT> {
@@ -232,7 +232,7 @@ fn matches_pattern_and_extractions(p: &PatternT, v: &Value) -> Option<Vec<(Strin
   }
 }
 
-fn replace_holes(eval_context: EvalContext, exp: ExprT) -> ExprT {
+pub fn replace_holes(eval_context: EvalContext, exp: ExprT) -> ExprT {
   eval_context.iter().fold(exp.clone(), |acc, (i, e)| replace(i, e.clone(), acc))
 }
 

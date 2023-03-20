@@ -1,8 +1,9 @@
 use crate::types::T;
-use crate::types::T::*;
 use crate::expr::ExprT;
 use crate::expr::{*};
 use std::collections::HashMap;
+use crate::expr::Declaration;
+use crate::typecheck;
 
 type UnprocessedSpec = Vec<(Vec<ExprT>, ExprT)>;
 
@@ -85,6 +86,31 @@ fn extract_variants (t: T) -> Vec<(String, T)>{
 pub fn expected_sig (spec: &SpecT) -> Vec<Value> {
   let mut output_bank: Vec<Value> = Vec::new();
   return output_bank;
+}
+
+pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, TypeDefinition, VariantContext){
+  let mut ec:EvalContext = HashMap::new();
+  let mut tc:TypeContext = HashMap::new();
+  let mut td:TypeDefinition = HashMap::new();
+  let mut vc:VariantContext = HashMap::new();
+
+  decls.iter().map(|decl| {
+    match decl {
+      Declaration::TypeDeclaration (id, ty) => {
+        let all_variants = extract_variants(ty.clone());
+        td.insert(id.to_string(), ty.clone());
+        all_variants.iter().map(|(ctor_id, arg_ty)| {
+          vc.insert(ctor_id.to_string(), (arg_ty.clone(), T::Named(id.to_string())));
+        });
+      },
+      Declaration::ExprDeclaration(id, e) => {
+        ec.insert(id.to_string(), replace_holes(ec.clone(), e.clone()));
+        let ty = typecheck::typecheck(&ec, &tc, &td, &vc, &e).unwrap();
+        tc.insert(id.to_string(), ty);
+      }
+    }
+  });
+  (ec, tc, td, vc)
 }
 
 pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<((Value, Value), Vec<ExprT>)> {
