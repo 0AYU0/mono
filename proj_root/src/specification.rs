@@ -2,7 +2,7 @@ use crate::bool_band::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::expr::Declaration;
 use crate::typecheck;
 
@@ -115,7 +115,7 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   return (ec, tc, td, vc)
 }
 
-pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> (Vec<ExprT>, Vec<((Value, Value), Vec<ExprT>)>) {
+pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
   let decls = get_declarations();
@@ -124,10 +124,9 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> (Vec<ExprT>, Vec<((Valu
   for test in io_examples.iter() {
     io_blocks.push((test.clone(), Vec::new()));
   } 
-  let mut observationalEquivalence: HashMap<String, ExprT> = HashMap::new();
   for expr in bank.iter() {
     let mut outputs = Vec::new();
-    let index = 0;
+    let mut index = 0;
     for test in io_examples.iter(){
       let test_i = exp_of_value(test.0.clone()).unwrap();
       let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), expr.clone());
@@ -146,15 +145,15 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> (Vec<ExprT>, Vec<((Valu
         _ => ()      
       }
       let x = format!("{:?}", outputs);
-      if !observationalEquivalence.contains_key(&x){
-        observationalEquivalence.insert(x, expr.clone());
+      if !obs_eq.contains_key(&x){
+        obs_eq.insert(x, expr.clone());
       }
       index += 1;
     }
   }
-  let mut new_bank = Vec::new();
-  for (_, value) in observationalEquivalence.iter(){
-    new_bank.push(value.clone());
+  let mut new_bank = HashSet::new();
+  for (_, value) in obs_eq.iter(){
+    new_bank.insert(value.clone());
   }
   return (new_bank, io_blocks);
 }

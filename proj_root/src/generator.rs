@@ -5,7 +5,7 @@ use crate::types::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::typecheck::{*};
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
   let (arg_ty, out_ty): (T, T) = spec.synth_type;
@@ -13,7 +13,7 @@ pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
   return ExprT::Fix(TARGET_FUNC.to_string(), T::Arrow(Box::new(arg_ty), Box::new(out_ty)), Box::new(func));
 }
 
-pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+pub fn grow_app(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   //Filters out all arrow functions
   /*let type_context: &mut TypeContext = &mut (spec.tc).clone();
   type_context.retain(|_, v| is_arrow_type((*v).clone()));
@@ -22,7 +22,7 @@ pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> 
     result_ty_arg_tys_arg_expss_set.insert((parent_ty.clone(), vec![arg_ty.clone()], Vec::new()));
   }*/
 
-  let mut new_bank: Vec<ExprT> = Vec::new();
+  let mut new_bank: HashSet<ExprT> = HashSet::new();
   for expr1 in bank.iter() {
     let t1: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr1);
       match t1 {
@@ -34,7 +34,7 @@ pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> 
                 match t2 {
                   Some(r_t2) => { 
                     if *arg_ty == r_t2 {
-                      new_bank.push(ExprT::App(Box::new(expr1.clone()), Box::new(expr2.clone())));
+                      new_bank.insert(ExprT::App(Box::new(expr1.clone()), Box::new(expr2.clone())));
                     }
                   },
                   _ => ()
@@ -51,7 +51,7 @@ pub fn grow_app(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> 
   return new_bank;
 }
 
-pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let variant_context: &VariantContext = &spec.vc;
   let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
   for (_, (arg_ty, parent_ty)) in variant_context {
@@ -76,7 +76,7 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
     }
   }*/
 
-  let mut expression_bank: Vec<ExprT> = Vec::new();
+  let mut expression_bank: HashSet<ExprT> = HashSet::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
     for expr in bank.iter() {
@@ -84,7 +84,7 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
       match ty {
         Some(s_ty) => {
           if *arg_ty == s_ty {
-          expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
+          expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
           }
         }
         None => print!("Typecheck failed on: {:?}\n", *expr),
@@ -98,7 +98,7 @@ pub fn grow_ctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
   return expression_bank;
 }
 
-pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+pub fn grow_unctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let variant_context: &VariantContext = &spec.vc; 
   let mut result_ty_arg_tys_arg_expss_set: BTreeSet<(T, Vec<T>, Vec<ExprT>)> = BTreeSet::new();
   for (_, (arg_ty, parent_ty)) in variant_context {
@@ -123,14 +123,15 @@ pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<Expr
     }
   }*/
 
-  let mut expression_bank: Vec<ExprT> = Vec::new();
+  let mut expression_bank: HashSet<ExprT> = HashSet::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
     for expr in bank.iter() {
       let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
       match ty {
-        Some(s_ty) => {if s_ty == *parent_ty && !(*arg_ty == T::_unit()){
-          expression_bank.push(ExprT::Unctor(s1.to_string(), Box::new(expr.clone())))
+        Some(s_ty) => {
+          if s_ty == *parent_ty && !(*arg_ty == T::_unit()) {
+            expression_bank.insert(ExprT::Unctor(s1.to_string(), Box::new(expr.clone())));
           }
           //print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
         },
@@ -142,7 +143,7 @@ pub fn grow_unctor(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<Expr
 }
 
 /*This may not actually have to do anything - in trio it just returns the exact same 'bank' or mapping of expressions */
-pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
+pub fn grow_eq(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let mut new_bank: Vec<ExprT> = Vec::new();
   for component_one in bank.iter() {
     for component_two in bank.iter() {   
@@ -150,41 +151,41 @@ pub fn grow_eq(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
         new_bank.push(ExprT::Eq(false, Box::new(component_one.clone()), Box::new(component_two.clone())));
     }
   }
-  return Vec::new();
+  return HashSet::new();
 }
 
-pub fn grow_tuple(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
-  let mut new_bank: Vec<ExprT> = Vec::new();
-  let vector_tuples: Vec<Vec<ExprT>> = grow_tuple_helper(bank, spec, curr_depth, vec![Vec::new()]); 
+pub fn grow_tuple(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
+  let mut new_bank: HashSet<ExprT> = HashSet::new();
+  let vector_tuples: HashSet<Vec<ExprT>> = grow_tuple_helper(bank, spec, curr_depth, HashSet::from_iter(vec![Vec::new()].iter().cloned())); 
   for vec in vector_tuples.iter() {
-    new_bank.push(ExprT::Tuple(vec.to_vec()));
+    new_bank.insert(ExprT::Tuple(vec.to_vec()));
   }
   return new_bank;
 }
 
-pub fn grow_tuple_helper(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32, curr_tuples: Vec<Vec<ExprT>>) -> Vec<Vec<ExprT>> {
+pub fn grow_tuple_helper(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32, curr_tuples: HashSet<Vec<ExprT>>) -> HashSet<Vec<ExprT>> {
   if curr_depth == 0 {
     return curr_tuples;
   }
-  let mut new_tuples: Vec<Vec<ExprT>> = Vec::new();
+  let mut new_tuples: HashSet<Vec<ExprT>> = HashSet::new();
   for component in bank.iter() {
     for tuple in curr_tuples.iter() {
       let mut t1: Vec<ExprT> = tuple.clone();
       t1.push(component.clone());
-      new_tuples.push(t1);
+      new_tuples.insert(t1);
     }
   }
   return grow_tuple_helper(bank, spec, curr_depth - 1, new_tuples); 
 }
 
-pub fn grow_proj(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT> {
-  let mut new_bank: Vec<ExprT> = Vec::new(); 
+pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
+  let mut new_bank: HashSet<ExprT> = HashSet::new(); 
   if curr_depth == 1{
     let input_ty: &T = &spec.synth_type.0;
     match input_ty {
       T::Tuple(vec) => {
         for size in 0..vec.len() {
-          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))))
+          new_bank.insert(ExprT::Proj(size.try_into().unwrap(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))));
         }
       },
       _ => ()
@@ -195,7 +196,7 @@ pub fn grow_proj(bank: &Vec<ExprT>, spec: &SpecT, curr_depth: i32) -> Vec<ExprT>
     match component {
       ExprT::Tuple(vec) => {
         for size in 0..vec.len() {
-          new_bank.push(ExprT::Proj(size.try_into().unwrap(), Box::new(component.clone())))
+          new_bank.insert(ExprT::Proj(size.try_into().unwrap(), Box::new(component.clone())));
         }
       }
       _ => ()

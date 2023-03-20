@@ -8,7 +8,7 @@ use crate::types::T;
 pub static TARGET_FUNC: &'static str = "f";
 pub static TARGET_FUNC_ARG: &'static str = "x";
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
 pub enum PatternT {
   Tuple(Vec<PatternT>),
   Ctor(String, Box<PatternT>),
@@ -27,13 +27,13 @@ impl PatternT {
   }
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
 pub struct Param {
   pub p_name: String,
   pub p_type: T,
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
 pub enum ExprT {
   Var(String),
   Wildcard,

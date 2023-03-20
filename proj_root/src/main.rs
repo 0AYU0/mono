@@ -10,7 +10,7 @@ use crate::bool_band::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
-use std::collections::BTreeMap;
+use std::collections::{HashMap, HashSet};
 
 fn main() {
   let (input_values, desired_type): (T, T) = (get_synth_type().0, get_synth_type().1);
@@ -20,15 +20,16 @@ fn main() {
   let io_examples: Vec<(Value, Value)> = get_synth_examples();
   let spec: SpecT = specification::SpecT::new(get_synth_type(), get_eval_context(), tc, get_type_definition(), get_variant_context(), io_examples);
   
-  let mut plist: Vec<ExprT> = vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()),  Var(TARGET_FUNC.to_string())];
-  let grow_funcs: Vec<fn(&Vec<ExprT>, &SpecT, i32) -> Vec<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
-  let max_depth: i32 = 4;
+  let mut plist: HashSet<ExprT> = HashSet::from_iter(vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()),  Var(TARGET_FUNC.to_string())].iter().cloned());
+  let grow_funcs: Vec<fn(&HashSet<ExprT>, &SpecT, i32) -> HashSet<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
+  let max_depth: i32 = 5;
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
+  let mut obs_eq: HashMap<String, ExprT> = HashMap::new();
   //print!("{:?}\n", plist);
   for curr_depth in 1..max_depth {
     //print!("Iteration: {:?}", curr_depth);
-    plist = grow_funcs.iter().fold(plist.clone(), |acc, grow_func| [acc, grow_func(&plist, &spec, curr_depth)].concat());
-    (plist, satisfying_blocks) = process_spec(&spec, &plist);
+    plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
+    (plist, satisfying_blocks) = process_spec(&spec, &plist, &mut obs_eq);
     print!("Plist: {:?}\n", plist);
     for block in satisfying_blocks.iter() {
       print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
