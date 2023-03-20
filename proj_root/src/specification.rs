@@ -115,18 +115,19 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   return (ec, tc, td, vc)
 }
 
-pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<ExprT> {
+pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> (Vec<ExprT>, Vec<((Value, Value), Vec<ExprT>)>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
-  let mut processed_spec: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
+  let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
   let decls = get_declarations();
   let (ec, tc, td, vc) = process_decl_list(decls);
 
   for test in io_examples.iter() {
-    processed_spec.push((test.clone(), Vec::new()));
+    io_blocks.push((test.clone(), Vec::new()));
   } 
   let mut observationalEquivalence: HashMap<String, ExprT> = HashMap::new();
   for expr in bank.iter() {
     let mut outputs = Vec::new();
+    let index = 0;
     for test in io_examples.iter(){
       let test_i = exp_of_value(test.0.clone()).unwrap();
       let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), expr.clone());
@@ -135,7 +136,7 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<ExprT> {
         Some(r1) => {
           //print!("Reached result {:?}\n", r1);
           if r1 == test.1 {
-            //(processed_spec[index]).1.push(expr.clone());
+            (io_blocks[index]).1.push(expr.clone());
             //print!("{:?} satisfies IO example {:?}\n\n", expr, test);
             outputs.push(true);
           } else {
@@ -148,11 +149,12 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<ExprT> {
       if !observationalEquivalence.contains_key(&x){
         observationalEquivalence.insert(x, expr.clone());
       }
+      index += 1;
     }
   }
   let mut new_bank = Vec::new();
   for (_, value) in observationalEquivalence.iter(){
     new_bank.push(value.clone());
   }
-  return new_bank;
+  return (new_bank, io_blocks);
 }
