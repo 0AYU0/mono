@@ -339,8 +339,10 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
       evaluate(replace(&i, e_cop, *e2))
     },
     ExprT::Tuple(es) => {
-      let vs = es.iter().filter_map(|s| evaluate(s.clone())).collect();
-      Some(Value::TupleV(vs))
+      let vs: Vec<Value> = es.iter().filter_map(|s| evaluate(s.clone())).collect();
+      let len = vs.len();
+      let ret = Some(Value::TupleV(vs));
+      if len == es.len() { ret } else { None }
     },
     ExprT::Proj(i, e) => {
       let v = evaluate(*e)?;
