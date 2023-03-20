@@ -1,6 +1,7 @@
 use egg::LanguageChildren;
 use std::cmp::{min, max};
 use std::collections::HashMap;
+use crate::specification::{*};
 
 use crate::types::T;
 
@@ -231,8 +232,8 @@ fn matches_pattern_and_extractions(p: &PatternT, v: &Value) -> Option<Vec<(Strin
   }
 }
 
-fn replace_holes(eval_context: HashMap<String, ExprT>, e: ExprT) -> ExprT {
-  eval_context.iter().fold(e.clone(), |acc, (i, e)| replace(i, e.clone(), acc))
+fn replace_holes(eval_context: EvalContext, exp: ExprT) -> ExprT {
+  eval_context.iter().fold(exp.clone(), |acc, (i, e)| replace(i, e.clone(), acc))
 }
 
 fn replace(i: &str, e_with: ExprT, e: ExprT) -> ExprT {
@@ -327,7 +328,7 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
         let (bindings, branch_e) = bindings_branchexp_opt
             .iter()
             .find_map(|x| x.clone())?;
-        let mut eval_context = HashMap::new();
+        let mut eval_context:EvalContext = HashMap::new();
         for (i, v) in bindings.iter() {
             assert_ne!(*v, Value::WildcardV);
             let exp = exp_of_value(v.clone())?;
@@ -365,4 +366,9 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
       }
     }
   }
+}
+
+pub fn evaluate_with_context(eval_context:EvalContext, e:ExprT) -> Option<Value> {
+	let e = replace_holes(eval_context, e);
+  evaluate(e)
 }

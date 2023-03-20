@@ -95,7 +95,7 @@ pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<((Value, Value), Ve
   } 
   for expr in bank.iter(){
     print!("Currently evaluating {:?}\n", expr);
-    let result: Option<Value> = evaluate(expr.clone());
+    let result: Option<Value> = evaluate_with_context(spec.ec.clone(), expr.clone());
     let mut index = 0;
     match result {
       Some(r1) => {
