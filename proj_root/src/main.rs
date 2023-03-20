@@ -22,14 +22,16 @@ fn main() {
   
   let mut plist: Vec<ExprT> = vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()),  Var(TARGET_FUNC.to_string())];
   let grow_funcs: Vec<fn(&Vec<ExprT>, &SpecT, i32) -> Vec<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
-  let max_depth: i32 = 3;
+  let max_depth: i32 = 4;
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
-  print!("{:?}\n", plist);
+  //print!("{:?}\n", plist);
   for curr_depth in 1..max_depth {
+    print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |acc, grow_func| [acc, grow_func(&plist, &spec, curr_depth)].concat());
     satisfying_blocks = process_spec(&spec, &plist);
-    print!("{:?}\n", plist);
+    //print!("Plist: {:?}\n", plist);
+    for block in satisfying_blocks.iter() {
+      print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
+    }
   }
-
-
 }

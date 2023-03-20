@@ -2,6 +2,7 @@ use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::expr::Value::{*, self};
 use crate::expr::ExprT::{*, self};
+use crate::expr::Declaration::{*, self};
 use std::collections::HashMap;
 
 pub fn get_bool() -> T {
@@ -15,6 +16,10 @@ pub fn get_synth_type() -> (T, T) {
 
 pub fn get_eval_context() -> EvalContext {
   return HashMap::new();
+}
+
+pub fn get_declarations() -> Vec<Declaration> {
+  return vec![TypeDeclaration("bool".to_string(), get_bool())];
 }
 
 pub fn get_type_context() -> TypeContext {

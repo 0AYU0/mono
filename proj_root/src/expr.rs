@@ -233,10 +233,11 @@ fn matches_pattern_and_extractions(p: &PatternT, v: &Value) -> Option<Vec<(Strin
 }
 
 pub fn replace_holes(eval_context: EvalContext, exp: ExprT) -> ExprT {
+  //print!("REPLACE_HOLES attempting to fill EC {:?} with EXP {:?}\n", eval_context, exp);
   eval_context.iter().fold(exp.clone(), |acc, (i, e)| replace(i, e.clone(), acc))
 }
 
-fn replace(i: &str, e_with: ExprT, e: ExprT) -> ExprT {
+pub fn replace(i: &str, e_with: ExprT, e: ExprT) -> ExprT {
     let replace_simple = |e: ExprT| replace(i, e_with.clone(), e);
     let e_orig = e.clone();
     match e {
@@ -244,6 +245,7 @@ fn replace(i: &str, e_with: ExprT, e: ExprT) -> ExprT {
         ExprT::Eq(b, e1, e2) => ExprT::Eq(b, Box::new(replace_simple(*e1)), Box::new(replace_simple(*e2))),
         ExprT::Var(i_) => {
             if i == i_ {
+                //print!("Currently attempting to fill hole {:?} with {:?}\n", e_with, i.to_string());
                 e_with
             } else {
                 e_orig
@@ -370,5 +372,10 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
 
 pub fn evaluate_with_context(eval_context:EvalContext, e:ExprT) -> Option<Value> {
 	let e = replace_holes(eval_context, e);
+  let e2 = e.clone();
+  match e2 {
+    ExprT::Proj(x, y) => print!("Proj({:?}, {:?})", x, y),
+    _ => (),
+  }
   evaluate(e)
 }

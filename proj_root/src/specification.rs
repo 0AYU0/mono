@@ -1,3 +1,4 @@
+use crate::bool_band::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -94,14 +95,14 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   let mut td:TypeDefinition = HashMap::new();
   let mut vc:VariantContext = HashMap::new();
 
-  decls.iter().map(|decl| {
+  for decl in decls.iter() {
     match decl {
       Declaration::TypeDeclaration (id, ty) => {
         let all_variants = extract_variants(ty.clone());
         td.insert(id.to_string(), ty.clone());
-        all_variants.iter().map(|(ctor_id, arg_ty)| {
+        for (ctor_id, arg_ty) in all_variants.iter(){
           vc.insert(ctor_id.to_string(), (arg_ty.clone(), T::Named(id.to_string())));
-        });
+        }
       },
       Declaration::ExprDeclaration(id, e) => {
         ec.insert(id.to_string(), replace_holes(ec.clone(), e.clone()));
@@ -109,33 +110,38 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
         tc.insert(id.to_string(), ty);
       }
     }
-  });
-  (ec, tc, td, vc)
+  }
+  //print!("EC {:?} TC {:?} TD {:?} VC {:?}", ec, tc, td, vc);
+  return (ec, tc, td, vc)
 }
 
 pub fn process_spec (spec: &SpecT, bank: &Vec<ExprT>) -> Vec<((Value, Value), Vec<ExprT>)> {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut processed_spec: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
+  let decls = get_declarations();
+  let (ec, tc, td, vc) = process_decl_list(decls);
+
   for test in io_examples.iter() {
     processed_spec.push((test.clone(), Vec::new()));
   } 
-  for expr in bank.iter(){
-    print!("Currently evaluating {:?}\n", expr);
-    let result: Option<Value> = evaluate_with_context(spec.ec.clone(), expr.clone());
-    let mut index = 0;
-    match result {
-      Some(r1) => {
-        print!("Reached result {:?}\n", r1);
-        for test in io_examples.iter() {
+  let mut index = 0;
+  for test in io_examples.iter(){
+    let test_i = exp_of_value(test.0.clone()).unwrap();
+    for expr in bank.iter() {
+      let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), expr.clone());
+      let result: Option<Value> = evaluate_with_context(ec.clone(), e1.clone());
+      match result {
+        Some(r1) => {
+          //print!("Reached result {:?}\n", r1);
           if r1 == test.1 {
-            processed_spec[index].1.push(expr.clone());
-            print!("{:?} satisfies IO example {:?}\n", expr, test);
+            (processed_spec[index]).1.push(expr.clone());
+            //print!("{:?} satisfies IO example {:?}\n", expr, test);
           }
-          index += 1;
-        }
-      },
-      _ => ()      
+        },
+        _ => ()      
+      }
     }
+    index += 1;
   }
   return processed_spec;
 }
