@@ -142,13 +142,16 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
             outputs.push(false);
           }
         },
-        _ => ()      
-      }
-      let x = format!("{:?}", outputs);
-      if !obs_eq.contains_key(&x){
-        obs_eq.insert(x, expr.clone());
+        _ => {
+          outputs.push(false);
+          ()
+        }      
       }
       index += 1;
+    }
+    let x = format!("{:?}", outputs);
+    if !obs_eq.contains_key(&x){
+      obs_eq.insert(x, expr.clone());
     }
   }
   let mut new_bank = HashSet::new();

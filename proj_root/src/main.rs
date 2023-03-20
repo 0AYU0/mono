@@ -30,9 +30,16 @@ fn main() {
     //print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
     (plist, satisfying_blocks) = process_spec(&spec, &plist, &mut obs_eq);
-    print!("Plist: {:?}\n", plist);
+    print!("Plist: {:?}\n\n", plist);
     for block in satisfying_blocks.iter() {
       print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
     }
   }
+
+  let mut io_output = Vec::new();
+  for i in &spec.spec {
+    io_output.push(true);
+  }
+
+  print!("Programs that satisfy all IO Examples: {:?}", obs_eq.get(&format!("{:?}", io_output)));
 }
