@@ -264,7 +264,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>)  {
             PatternT::Ctor(s, t) => {
               let pts = pt_map.get(s).unwrap();
             },
-            _ => print!("p  is not a ctor")
+            _ => print!("p is not a ctor")
           }
         }
       },

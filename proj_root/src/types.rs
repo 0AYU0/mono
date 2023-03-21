@@ -1,11 +1,23 @@
 use std::cmp::Ordering;
+use std::fmt;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Hash, Debug)]
 pub enum T {
   Named(String),
   Arrow(Box<T>, Box<T>),
   Tuple(Vec<T>),
   Variant(Vec<(String, T)>)
+}
+
+impl fmt::Display for T {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            T::Named(i) => write!(f, "{}", i),
+            T::Arrow(t1, t2) => write!(f, "({} -> {})", *t1, *t2),
+            T::Tuple(ts) => write!(f, "({})", ts.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join(", ")),
+            T::Variant(its) => write!(f, "{}", its.iter().map(|(i, t)| format!("| {} of {}", i, t)).collect::<Vec<String>>().join("\n")),
+        }
+    }
 }
 
 impl T {

@@ -2,18 +2,30 @@ use egg::LanguageChildren;
 use std::cmp::{min, max};
 use std::collections::HashMap;
 use crate::specification::{*};
+use std::fmt;
 
 use crate::types::T;
 
 pub static TARGET_FUNC: &'static str = "f";
 pub static TARGET_FUNC_ARG: &'static str = "x";
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Hash, Debug)]
 pub enum PatternT {
   Tuple(Vec<PatternT>),
   Ctor(String, Box<PatternT>),
   Var(String),
   Wildcard,
+}
+
+impl fmt::Display for PatternT {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      match self {
+        PatternT::Tuple(ts) => write!(f, "[{}]", ts.iter().map(|t| format!("{:?}", t)).collect::<Vec<_>>().join(", ")),
+          PatternT::Ctor(i, t) => write!(f, "{}({:?})", i, t),
+          PatternT::Var(i) => write!(f, "{}", i),
+          PatternT::Wildcard => write!(f, "_"),
+      }
+  }
 }
 
 impl PatternT {
@@ -33,7 +45,7 @@ pub struct Param {
   pub p_type: T,
 }
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
 pub enum ExprT {
   Var(String),
   Wildcard,
@@ -46,6 +58,49 @@ pub enum ExprT {
   Fix(String, T, Box<ExprT>),
   Tuple(Vec<ExprT>),
   Proj(i32, Box<ExprT>),
+}
+
+impl fmt::Debug for ExprT {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+      fn show(e: &ExprT, indent: usize) -> String {
+          fn make_indent(indent: usize) -> String {
+              " ".repeat(indent * 2)
+          }
+
+          match e {
+            ExprT::Var(i) => i.clone(),
+            ExprT::Wildcard => "_".to_owned(),
+            ExprT::App(e1, e2) => format!("({} {})", show(e1, indent), show(e2, indent)),
+            ExprT::Func(Param{p_name: p, p_type: t}, e1) => format!("fun ({}:{}) ->\n{}", p, t, show(e1, indent + 1)),
+            ExprT::Ctor(i, e1) => format!("{}({})", i, show(e1, indent)),
+            ExprT::Unctor(i, e1) => format!("Un_{}({})", i, show(e1, indent)),
+            ExprT::Eq(b, e1, e2) => format!("{} {} {}", show(e1, indent), if *b { "=" } else { "<>" }, show(e2, indent)),
+            ExprT::Match(e1, patterns) => {
+                  let mut result = format!("match {} with\n", show(e1, indent));
+                  for (p, e2) in patterns {
+                      result.push_str(&format!("{} ->\n{}\n{}", p, show(e2, indent + 1), make_indent(indent)));
+                  }
+                  result
+              },
+              ExprT::Fix(i, t, e1) => format!("let rec ({i}: {t}) =\n{}", show(e1, indent + 1), i = i, t = t),
+              ExprT::Tuple(es) => format!("{}",
+                  es.iter().map(|e| show(e, 0)).collect::<Vec<_>>().join(", ")
+              ),
+              ExprT::Proj(i, e1) => format!("({}).{}", show(e1, indent), i),
+          }
+          .chars()
+          .fold((make_indent(indent), true), |(mut acc, sep), c| {
+              if sep && c != '\n' {
+                  acc.push_str(&make_indent(indent));
+              }
+              acc.push(c);
+              (acc, c == '\n')
+          })
+          .0
+      }
+
+      write!(f, "{}", show(self, 0))
+  }
 }
 
 fn destruct_tuple (e: ExprT) -> Vec<ExprT> { 
@@ -173,7 +228,7 @@ pub fn is_unctor_exp(t: ExprT) -> bool {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Value {
   FuncV(Param, ExprT),
   CtorV(String, Box<Value>),
@@ -181,6 +236,22 @@ pub enum Value {
   WildcardV,
   Bot
 }
+
+impl fmt::Debug for Value {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+        Value::Bot => write!(f, "bot"),
+        _ => {
+          let exp = exp_of_value(self.clone());
+          match exp {
+            Some(e) => write!(f, "{:?}", e),
+            _ => write!(f, "{:?}", exp)
+          }
+        },
+    }
+  }
+}
+
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Declaration {
