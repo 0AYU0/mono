@@ -21,7 +21,7 @@ impl fmt::Display for PatternT {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
       match self {
         PatternT::Tuple(ts) => write!(f, "[{}]", ts.iter().map(|t| format!("{:?}", t)).collect::<Vec<_>>().join(", ")),
-          PatternT::Ctor(i, t) => write!(f, "{}({:?})", i, t),
+          PatternT::Ctor(i, t) => write!(f, "{}({})", i, t),
           PatternT::Var(i) => write!(f, "{}", i),
           PatternT::Wildcard => write!(f, "_"),
       }
@@ -72,13 +72,13 @@ impl fmt::Debug for ExprT {
             ExprT::Wildcard => "_".to_owned(),
             ExprT::App(e1, e2) => format!("({} {})", show(e1, indent), show(e2, indent)),
             ExprT::Func(Param{p_name: p, p_type: t}, e1) => format!("fun ({}:{}) ->\n{}", p, t, show(e1, indent + 1)),
-            ExprT::Ctor(i, e1) => format!("{}({})", i, show(e1, indent)),
+            ExprT::Ctor(i, e1) => format!("{}({})", i, show(e1, 0)),
             ExprT::Unctor(i, e1) => format!("Un_{}({})", i, show(e1, indent)),
             ExprT::Eq(b, e1, e2) => format!("{} {} {}", show(e1, indent), if *b { "=" } else { "<>" }, show(e2, indent)),
             ExprT::Match(e1, patterns) => {
-                  let mut result = format!("match {} with\n", show(e1, indent));
+                  let mut result = format!("match {} with\n", show(e1, 0));
                   for (p, e2) in patterns {
-                      result.push_str(&format!("{} ->\n{}\n{}", p, show(e2, indent + 1), make_indent(indent)));
+                      result.push_str(&format!("{}{} ->\n{}\n", make_indent(indent+1), p, show(e2, indent)));
                   }
                   result
               },
@@ -86,7 +86,7 @@ impl fmt::Debug for ExprT {
               ExprT::Tuple(es) => format!("{}",
                   es.iter().map(|e| show(e, 0)).collect::<Vec<_>>().join(", ")
               ),
-              ExprT::Proj(i, e1) => format!("({}).{}", show(e1, indent), i),
+              ExprT::Proj(i, e1) => format!("({}).{}", show(e1, 0), i),
           }
           .chars()
           .fold((make_indent(indent), true), |(mut acc, sep), c| {
