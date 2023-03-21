@@ -4,6 +4,7 @@ mod specification;
 mod bool_impl;
 mod generator;
 mod typecheck;
+mod egg_test;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
 use crate::bool_impl::{*};

@@ -3,6 +3,8 @@ use std::cmp::{min, max};
 use std::collections::HashMap;
 use crate::specification::{*};
 use std::fmt;
+use egg::{*};
+use std::fmt::{Display};
 
 use crate::types::T;
 
@@ -59,6 +61,63 @@ pub enum ExprT {
   Tuple(Vec<ExprT>),
   Proj(i32, Box<ExprT>),
 }
+pub struct ExprLang {
+  /// The operator for an enode
+  pub expr: ExprT,
+  /// The enode's children `Id`s
+  pub children: Vec<Id>,
+}
+
+impl egg::Language for ExprT {
+  fn matches(&self, other: &Self) -> bool {
+    return matches!(self, other);
+  }
+
+  fn children(&self) -> &[Id] {
+    match self {
+      ExprT::Var(s) => {let v: Vec<Id> = vec![Into::into(1)]; &v},
+      ExprT::App(e1, e2) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      ExprT::Func(p, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      ExprT::Ctor(s, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      ExprT::Unctor(s, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      ExprT::Eq(b, e1, e2) => {let v: Vec<Id> = vec![Into::into(3)]; &v},
+      ExprT::Match(e, v) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      ExprT::Fix(s, t, e) => {let v: Vec<Id> = vec![Into::into(3)]; &v},
+      ExprT::Tuple(es) => {let v: Vec<Id> = vec![Into::into(1)]; &v},
+      ExprT::Proj(i, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
+      _ => {let v: Vec<Id> = vec![]; &v},
+    }
+  }
+
+  fn children_mut(&mut self) -> &mut [Id] {
+      &mut self.children()
+  }
+}
+
+/*#[derive(Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+impl egg::Language for ExprLang {
+  fn matches(&self, other: &Self) -> bool {
+      true
+  }
+
+  fn children(&self) -> &[Id] {
+      &self.children
+  }
+
+  fn children_mut(&mut self) -> &mut [Id] {
+      &mut self.children
+  }
+}
+
+impl fmt::Display for Param {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn show(e: &Param) -> String {
+      format!("fun ({}:{})\n", e.p_name, e.p_type)
+    }
+    write!(f, "{}", show(self))
+  }
+}*/
 
 impl fmt::Debug for ExprT {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
