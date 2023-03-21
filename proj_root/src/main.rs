@@ -4,7 +4,7 @@ mod specification;
 mod bool_impl;
 mod generator;
 mod typecheck;
-mod egg_test;
+// mod egg_test;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
 use crate::bool_impl::{*};
@@ -12,6 +12,7 @@ use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
 use std::collections::{HashMap, HashSet};
+use egg::*;
 
 fn main() {
   let (input_values, desired_type): (T, T) = (get_synth_type().0, get_synth_type().1);
@@ -27,12 +28,13 @@ fn main() {
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
   let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); 
   let mut obs_eq: HashMap<String, ExprT> = HashMap::new();
+  let rules: Vec<Rewrite<ExprLang, ()>> = vec![];
   //print!("{:?}\n", plist);
   let mut curr_depth = 1;
   while curr_depth < max_depth {
     //print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
-    (plist, satisfying_blocks, program_blocks) = process_spec(&spec, &plist, &mut obs_eq);
+    (plist, satisfying_blocks, program_blocks) = process_spec(&spec, &plist, &mut obs_eq, &rules);
     print!("Plist: {:?}\n\n", plist);
     for block in satisfying_blocks.iter() {
       print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);

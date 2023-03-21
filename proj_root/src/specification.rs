@@ -3,8 +3,10 @@ use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use crate::expr::Declaration;
 use crate::typecheck;
+use egg::*;
 
 type UnprocessedSpec = Vec<(Vec<ExprT>, ExprT)>;
 
@@ -120,7 +122,7 @@ pub fn is_solution(spec: &SpecT, e: ExprT) {
 
 }
 
-pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>) {
+pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>, rules: &Vec<Rewrite<ExprLang, ()>>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
   let decls = get_declarations();
@@ -168,6 +170,10 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
 
     if !obs_eq.contains_key(&x){
       obs_eq.insert(x, expr.clone());
+    } else {
+      let exp = obs_eq.get(&x).unwrap();
+      let name = format!("{:?}", exp);
+      rules.push(rewrite!(name; exp => expr));
     }
   }
   let mut new_bank = HashSet::new();

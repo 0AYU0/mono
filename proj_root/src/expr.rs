@@ -47,7 +47,7 @@ pub struct Param {
   pub p_type: T,
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Hash, From)]
 pub enum ExprT {
   Var(String),
   Wildcard,
@@ -61,6 +61,13 @@ pub enum ExprT {
   Tuple(Vec<ExprT>),
   Proj(i32, Box<ExprT>),
 }
+
+fn variant_eq<T>(a: &T, b: &T) -> bool {
+  std::mem::discriminant(a) == std::mem::discriminant(b)
+}
+
+#[derive(PartialOrd, Ord, PartialEq, Eq, Clone, Hash, Debug)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
 pub struct ExprLang {
   /// The operator for an enode
   pub expr: ExprT,
@@ -68,29 +75,43 @@ pub struct ExprLang {
   pub children: Vec<Id>,
 }
 
-impl egg::Language for ExprT {
+impl ExprLang {
+  /// Create an enode with the given string and children
+  pub fn new(ex: impl Into<ExprT>, children: Vec<Id>) -> Self {
+      let expr = ex.into();
+      Self { expr, children }
+  }
+
+  /// Create childless enode with the given string
+  pub fn leaf(expr: impl Into<ExprT>) -> Self {
+      Self::new(expr, vec![])
+  }
+}
+
+impl FromOp for ExprLang {
+  type Error = std::convert::Infallible;
+
+  fn from_op(expr: &str, children: Vec<Id>) -> Result<Self, Self::Error> {
+      Ok(Self {
+          expr: expr.into(),
+          children,
+      })
+  }
+}
+
+impl egg::Language for ExprLang {
   fn matches(&self, other: &Self) -> bool {
-    return matches!(self, other);
+    let e1 = self.expr.clone();
+    let e2 = other.expr.clone();
+    return variant_eq(&e1, &e2);
   }
 
   fn children(&self) -> &[Id] {
-    match self {
-      ExprT::Var(s) => {let v: Vec<Id> = vec![Into::into(1)]; &v},
-      ExprT::App(e1, e2) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      ExprT::Func(p, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      ExprT::Ctor(s, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      ExprT::Unctor(s, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      ExprT::Eq(b, e1, e2) => {let v: Vec<Id> = vec![Into::into(3)]; &v},
-      ExprT::Match(e, v) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      ExprT::Fix(s, t, e) => {let v: Vec<Id> = vec![Into::into(3)]; &v},
-      ExprT::Tuple(es) => {let v: Vec<Id> = vec![Into::into(1)]; &v},
-      ExprT::Proj(i, e) => {let v: Vec<Id> = vec![Into::into(2)]; &v},
-      _ => {let v: Vec<Id> = vec![]; &v},
-    }
+    return &self.children;
   }
 
   fn children_mut(&mut self) -> &mut [Id] {
-      &mut self.children()
+      &mut self.children
   }
 }
 
