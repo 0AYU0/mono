@@ -1,10 +1,11 @@
-use crate::list_length::get_declarations;
+use crate::list_stutter::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use crate::expr::Declaration;
-use crate::typecheck;
+use crate::typecheck::*;
 
 type UnprocessedSpec = Vec<(Vec<ExprT>, ExprT)>;
 
@@ -107,7 +108,7 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
       },
       Declaration::ExprDeclaration(id, e) => {
         ec.insert(id.to_string(), replace_holes(ec.clone(), e.clone()));
-        let ty = typecheck::typecheck(&ec, &tc, &td, &vc, &e).unwrap();
+        let ty = typecheck(&ec, &tc, &td, &vc, &e).unwrap();
         tc.insert(id.to_string(), ty);
       }
     }
@@ -116,16 +117,14 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   return (ec, tc, td, vc)
 }
 
-pub fn is_solution(spec: &SpecT, e: ExprT) {
-
-}
-
-pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>) {
+pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>, HashMap<T, HashSet<ExprT>>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
   let decls = get_declarations();
   let (ec, tc, td, vc) = process_decl_list(decls);
   let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new();
+
+  let mut ty_to_exprs: HashMap<T, HashSet<ExprT>> = HashMap::new();
 
   for test in io_examples.iter() {
     io_blocks.push((test.clone(), Vec::new()));
@@ -141,8 +140,23 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
       let result: Option<Value> = evaluate_with_context(ec.clone(), e1.clone());
       match result {
         Some(r1) => {
+          let res_type = typecheck(&ec, &tc, &td, &vc, &e1);
+          match res_type {
+            Some(t) => {
+              if ty_to_exprs.contains_key(&t) {
+                let mut hs = ty_to_exprs.get(&t).unwrap().clone();
+                hs.insert(expr.clone());
+                ty_to_exprs.insert(t, hs);
+              } else {
+                let mut hs = HashSet::new();
+                hs.insert(expr.clone());
+                ty_to_exprs.insert(t, hs);
+              }
+            },
+            _ => {print!("invalid type");}
+          }
           print!("Reached result {:?}\n", r1);
-          new_bank.insert(expr.clone());
+          // new_bank.insert(expr.clone());
           if r1 == test.1 {
             (io_blocks[index]).1.push(expr.clone());
             outputs.push(true);
@@ -175,5 +189,5 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
   for (_, value) in obs_eq.iter(){
     new_bank.insert(value.clone());
   }
-  return (new_bank, io_blocks, program_blocks);
+  return (new_bank, io_blocks, program_blocks, ty_to_exprs);
 }

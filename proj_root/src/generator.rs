@@ -8,6 +8,7 @@ use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::typecheck::{*};
 use std::collections::{BTreeSet, HashSet, HashMap};
+use std::hash::Hash;
 
 pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
   let (arg_ty, out_ty): (T, T) = spec.synth_type;
@@ -209,7 +210,7 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
 }
 
 //In the recursive case, may need to add more examples or have less pruning
-pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<ExprT> {
+pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs: HashMap<T, HashSet<ExprT>>) -> Option<ExprT> {
   let mut input_type = &spec.synth_type.0;
   let mut scrutinees: HashMap<ExprT, T> = HashMap::new();
   let mut match_queue: Vec<ExprT> = Vec::new();
@@ -232,6 +233,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<Ex
     _ => print!("Input type was not a tuple\n") 
   }
 
+  let mut available_uncons:HashSet<ExprT> = HashSet::new();
 
   for (scrutinee, _) in scrutinees.iter() {
     let mut pt_vec: HashMap<String, Vec<usize>> = HashMap::new();
@@ -242,6 +244,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<Ex
       let result: Option<Value> = evaluate_with_context(spec.ec.clone(), e1.clone());
       match result {
         Some(CtorV(s, _)) => {
+          available_uncons.insert(ExprT::Unctor(s.to_string(), Box::new(scrutinee.clone())));
           pt_vec.entry(s)
               .or_insert(Vec::new())
               .push(index);
@@ -262,6 +265,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<Ex
     let mut valid_expr_map: HashMap<String, Vec<ExprT>> = HashMap::new();
     let mut candidate: Option<ExprT> = match_queue.pop();
     let test1 = candidate.clone().unwrap();
+    
     match candidate {
       Some(un_cand) => match un_cand {
         ExprT::Match(ex, branch) => {
@@ -273,6 +277,10 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<Ex
                 PatternT::Ctor(s, t) => {
                     let pts: Vec<usize> = pt_map.get(s).unwrap().to_vec();
                     let valid_exprs = fillMatchHoles(&pts,& points);
+                    let mut scrut: HashSet<ExprT> = HashSet::new();
+                    let temp = scrutinees.iter().map(|(s,_)| scrut.insert(s.clone()));
+                    let rec_expr: HashSet<ExprT> = get_valid_recursive_components(&spec.synth_type.1, &ty_to_exprs, &available_uncons, &scrut);
+
                     // print!("Valid Exprs: {:?}", valid_exprs);
                     for index in 0..valid_exprs.len(){
                     let newCandidate = replace_branch(test1.clone(), valid_exprs[index].clone(), pattern.clone());
@@ -280,7 +288,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<Ex
                       completePrograms.insert(newCandidate.clone());
                     } else {
                       match_queue.push(newCandidate.clone())    
-                    }              
+                    }      
                   }             
                 },
                 _ => print!("p is not a ctor")
@@ -348,7 +356,7 @@ fn is_match_complete(candidate: ExprT) -> bool {
 }
 
 pub fn get_valid_recursive_components(
-  desired_ty: T,
+  desired_ty: &T,
   ty_to_exprs: &HashMap<T, HashSet<ExprT>>,
   available_uncons: &HashSet<ExprT>,
   scrutinees: &HashSet<ExprT>,
