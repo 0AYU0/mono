@@ -1,4 +1,4 @@
-use egg::Pattern;
+use egg::{Pattern, Condition};
 
 use crate::expr::Value::{*, self};
 use crate::expr::ExprT::{*, self};
@@ -79,19 +79,74 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
     }
   }*/
 
+  /*for t in vec.iter() { //Iterating each named type
+          match t {
+            Named(named_type) => { //Either nat or list or something
+              for expr in bank.iter() {
+                let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
+                match ty {
+                  Some(s_ty) => { 
+                    if *t == s_ty { //If the named type in the tuple matches up with the typecheck of the expression
+                      possibleOne.push(expr.clone());
+                    }
+                  }
+                  None => print!("Typecheck failed on: {:?}\n", *expr),
+                }
+              }
+            }
+            _ => print!("T inside Tuple is not Named: {:?}\n", *t)
+          }
+        } */
+
   let mut expression_bank: HashSet<ExprT> = HashSet::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
-  for (s1, (arg_ty, parent_ty)) in variant_context.iter() {
-    for expr in bank.iter() {
-      let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
-      match ty {
-        Some(s_ty) => {
-          if *arg_ty == s_ty {
-          expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
+  for (s1, (arg_ty, parent_ty)) in variant_context.iter() { //Might be a (Tuple, Named), or (Named, Named)
+    match arg_ty {
+      T::Tuple(vec) => {
+        if vec.len() == 0 {
+          expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![]))));
+        } else {
+          let mut possibleTwo: Vec<(ExprT, ExprT)> = Vec::new(); //Get all of the possible tuples of expressions
+          for expr1 in bank.iter() {
+            let ty1: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr1);
+            match ty1 {
+              Some(s_ty) => {
+                if vec[0] == s_ty {
+                  for expr2 in bank.iter() {
+                    let ty2: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr2);
+                    match ty2 {
+                      Some(r_ty) => {
+                        if vec[1] == r_ty {
+                          possibleTwo.push((expr1.clone(), expr2.clone()));
+                        }
+                      }
+                      None => print!("Typecheck failed on: {:?}\n", *expr1),
+                    }
+                  }
+                }
+              }
+              None => print!("Typecheck failed on: {:?}\n", *expr1),
+            }
+          }
+          for (first, second) in possibleTwo.iter() {
+            expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![first.clone(), second.clone()]))));
           }
         }
-        None => print!("Typecheck failed on: {:?}\n", *expr),
       }
+      T::Named(str) => {
+        for expr in bank.iter() {
+          let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
+          match ty {
+            Some(s_ty) => {
+              if *arg_ty == s_ty {
+                expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
+              }
+            }
+            None => print!("Typecheck failed on: {:?}\n", *expr),
+          }
+        }
+      },
+      _ => print!("Arg type was not tuple or named: {:?}\n", *arg_ty)
       /*match (s1, (arg_ty, parent_ty)) {
         (s1, (arg_ty, parent_ty)) => expression_bank.push(ExprT::Ctor(s1.to_string(), Box::new(component.clone()))),
         _ => continue,
@@ -230,18 +285,24 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
         }
       }
     }
+    T::Named(x) => {
+      scrutinees.insert(ExprT::Var(TARGET_FUNC_ARG.to_string()), input_type.clone());
+    }
     _ => print!("Input type was not a tuple\n") 
   }
 
   let mut available_uncons:HashSet<ExprT> = HashSet::new();
 
   for (scrutinee, _) in scrutinees.iter() {
+    print!("Scrutinees: {:?}\n", scrutinee);  
     let mut pt_vec: HashMap<String, Vec<usize>> = HashMap::new();
     let mut index = 0;
     for (input, _) in io_examples.iter() {
-      let test_i = exp_of_value(input.clone()).unwrap();
+      let test_i = exp_of_value(input.clone()).unwrap();      
       let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), scrutinee.clone());
+      print!("e1: {:?}\n", e1);  
       let result: Option<Value> = evaluate_with_context(spec.ec.clone(), e1.clone());
+      print!("result: {:?}\n", result);  
       match result {
         Some(CtorV(s, _)) => {
           available_uncons.insert(ExprT::Unctor(s.to_string(), Box::new(scrutinee.clone())));
@@ -259,11 +320,13 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     match_queue.push(ExprT::Match(Box::new(scrutinee.clone()), pt_vec.keys().map(|s| (PatternT::Ctor(s.to_string(), Box::new(PatternT::Wildcard)), ExprT::Wildcard)).collect()));
     io_points.insert(scrutinee.clone(), pt_vec);
   }
-
+  print!("Available Uncons: {:?}\n", available_uncons);
+  print!("ty_to_exprs: {:?}\n", ty_to_exprs);
   let mut completePrograms: HashSet<ExprT> = HashSet::new();
   while !match_queue.is_empty() {
     let mut valid_expr_map: HashMap<String, Vec<ExprT>> = HashMap::new();
     let mut candidate: Option<ExprT> = match_queue.pop();
+    print!("Candidate: {:?}\n", candidate);
     let test1 = candidate.clone().unwrap();
     
     match candidate {
@@ -276,12 +339,13 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
               match pattern {
                 PatternT::Ctor(s, t) => {
                     let pts: Vec<usize> = pt_map.get(s).unwrap().to_vec();
-                    let valid_exprs = fillMatchHoles(&pts,& points);
+                    let mut valid_exprs:Vec<ExprT> = fillMatchHoles(&pts,& points);
                     let mut scrut: HashSet<ExprT> = HashSet::new();
                     let temp = scrutinees.iter().map(|(s,_)| scrut.insert(s.clone()));
-                    let rec_expr: HashSet<ExprT> = get_valid_recursive_components(&spec.synth_type.1, &ty_to_exprs, &available_uncons, &scrut);
-
-                    // print!("Valid Exprs: {:?}", valid_exprs);
+                    let mut rec_expr: HashSet<ExprT> = get_valid_recursive_components(&spec.synth_type.1, &ty_to_exprs, &available_uncons, &scrut);
+                    let mut rec_vec = Vec::from_iter(rec_expr).clone();
+                    print!("Rec Exprs: {:?}\n", rec_vec);
+                    valid_exprs.append(&mut rec_vec);
                     for index in 0..valid_exprs.len(){
                     let newCandidate = replace_branch(test1.clone(), valid_exprs[index].clone(), pattern.clone());
                     if(is_match_complete(newCandidate.clone())) {
@@ -378,8 +442,7 @@ pub fn get_valid_recursive_components(
                   es.iter().all(|e| {
                       // argument contains unconstructor: termination guaranteed
                       !get_unconstructors(e).is_empty()
-                          || // otherwise, at least it should not be a scrutinee to guarantee termination
-                          // e.g., match x with S _ -> f(x) ===> infinite recursion!
+                          || 
                           !scrutinees.contains(e)
                   })
               }

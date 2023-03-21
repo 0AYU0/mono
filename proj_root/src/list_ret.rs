@@ -38,7 +38,7 @@ pub fn get_type_definition() -> TypeDefinition {
 
 pub fn get_variant_context() -> VariantContext {
   let Nil = ("Nil".to_string(), (T::Tuple(Vec::new()), Named("list".to_string())));
-  let Cons = ("Cons".to_string(), (Named("nat".to_string()), T::Tuple(vec![Named("nat".to_string()), Named("list".to_string())])));
+  let Cons = ("Cons".to_string(), (T::Tuple(vec![Named("nat".to_string()), Named("list".to_string())]), T::Tuple(vec![Named("list".to_string())])));
   let O = ("O".to_string(), (T::Tuple(Vec::new()), Named("nat".to_string())));
   let S = ("S".to_string(), (Named("nat".to_string()), Named("nat".to_string())));
   return HashMap::from([Nil, Cons, O, S]);
@@ -47,8 +47,7 @@ pub fn get_variant_context() -> VariantContext {
 pub fn get_synth_examples() -> Vec<(Value, Value)> {
   let nil: Value = CtorV("Nil".to_string(), Box::new(TupleV(Vec::new())));
   let zero = CtorV("O".to_string(), Box::new(TupleV(Vec::new())));
-  let one = CtorV("S".to_string(), Box::new(zero.clone()));
-  let cons_two: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])));
-  let cons_four: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])))])))])));
-  return vec![(nil.clone(), nil.clone()), (cons_two, cons_four)];
+  let cons_one: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])));
+  let cons_two: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])));
+  return vec![(nil.clone(), nil.clone()), (cons_two.clone(), cons_one.clone()), (cons_one.clone(), cons_one.clone())];
 }

@@ -250,11 +250,13 @@ pub fn get_unconstructors(e: &ExprT) -> HashSet<ExprT> {
 }
 
 pub fn using_allowed_unconstructor(expr: &ExprT, available_uncons: &HashSet<ExprT>) -> bool {
-  get_unconstructors(expr).is_subset(available_uncons)
+  let satisfy = get_unconstructors(expr).is_subset(available_uncons);
+  print!("Using allowed unconstructor: {:?}\n", satisfy);
+  return satisfy;
 }
 
 pub fn count_recursions(e: &ExprT) -> i32 {
-  match e {
+  let num = match e {
       ExprT::Var(i) => {
           if i == TARGET_FUNC {
               1
@@ -284,7 +286,8 @@ pub fn count_recursions(e: &ExprT) -> i32 {
       }
       ExprT::Proj(_, e) => count_recursions(e),
       _ => 0,
-  }
+  };
+  return num;
 }
 
 pub fn unit() -> ExprT {

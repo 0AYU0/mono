@@ -136,7 +136,7 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
     for test in io_examples.iter(){
       let test_i = exp_of_value(test.0.clone()).unwrap();
       let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), expr.clone());
-      print!("Trying to evaluate {:?}\n", e1);
+      //print!("Trying to evaluate {:?}\n", e1);
       let result: Option<Value> = evaluate_with_context(ec.clone(), e1.clone());
       match result {
         Some(r1) => {
@@ -156,7 +156,7 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
             _ => {print!("invalid type");}
           }
           print!("Reached result {:?}\n", r1);
-          // new_bank.insert(expr.clone());
+          new_bank.insert(expr.clone());
           if r1 == test.1 {
             (io_blocks[index]).1.push(expr.clone());
             outputs.push(true);

@@ -17,7 +17,7 @@ pub fn get_list() -> T {
 }
 
 pub fn get_synth_type() -> (T, T) {
-  return (T::Tuple(vec![Named("list".to_string())]), Named("nat".to_string()));
+  return (Named("list".to_string()), Named("nat".to_string()));
 }
 
 pub fn get_eval_context() -> EvalContext {
