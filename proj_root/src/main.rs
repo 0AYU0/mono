@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod bool_band;
+mod bool_impl;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::bool_band::{*};
+use crate::bool_impl::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
@@ -27,7 +27,8 @@ fn main() {
   let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); 
   let mut obs_eq: HashMap<String, ExprT> = HashMap::new();
   //print!("{:?}\n", plist);
-  for curr_depth in 1..max_depth {
+  let mut curr_depth = 1;
+  while curr_depth < max_depth {
     //print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
     (plist, satisfying_blocks, program_blocks) = process_spec(&spec, &plist, &mut obs_eq);
@@ -38,7 +39,14 @@ fn main() {
     for (expr, pts) in program_blocks.iter() {
       print!("Program Blocks: Expr: {:?}, Points {:?}\n\n", expr, pts);
     }
-    grow_match(&spec, program_blocks);
+    let res: Option<ExprT> = grow_match(&spec, program_blocks);
+    match res {
+      Some(ex) => {
+        print!("Found complete program: \n{:?}\n", wrap(spec.clone(), ex));
+        break;
+      },
+      _ => {curr_depth += 1;}
+    }
   }
 
   let mut io_output = Vec::new();

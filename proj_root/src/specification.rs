@@ -1,4 +1,4 @@
-use crate::bool_band::get_declarations;
+use crate::bool_impl::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -24,6 +24,7 @@ pub type TypeContext = HashMap<String, T>;
 pub type TypeDefinition = HashMap<String, T>;
 pub type VariantContext = HashMap<String, (T, T)>;
 
+#[derive(Clone, Debug)]
 pub struct SpecT {
   pub synth_type: (T, T),
   pub ec: EvalContext,
@@ -113,6 +114,10 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   }
   //print!("EC {:?} TC {:?} TD {:?} VC {:?}", ec, tc, td, vc);
   return (ec, tc, td, vc)
+}
+
+pub fn is_solution(spec: &SpecT, e: ExprT) {
+
 }
 
 pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>) {

@@ -198,6 +198,13 @@ pub fn false_() -> ExprT {
   return ExprT::Ctor("False".to_string(), Box::new(unit()));
 }
 
+pub fn is_wildcard(t: ExprT) -> bool {
+	match t { 
+    ExprT::Wildcard => true,
+	  _ => false 
+  }
+}
+
 pub fn is_ctor_exp(t: ExprT) -> bool {
 	match t { 
     ExprT::Ctor(_, _) => true,

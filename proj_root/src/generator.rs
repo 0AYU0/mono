@@ -1,3 +1,5 @@
+use egg::Pattern;
+
 use crate::expr::Value::{*, self};
 use crate::expr::ExprT::{*, self};
 use crate::expr::{*, self};
@@ -207,7 +209,7 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
 }
 
 //In the recursive case, may need to add more examples or have less pruning
-pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>)  {
+pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>) -> Option<ExprT> {
   let mut input_type = &spec.synth_type.0;
   let mut scrutinees: HashMap<ExprT, T> = HashMap::new();
   let mut match_queue: Vec<ExprT> = Vec::new();
@@ -255,25 +257,92 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>)  {
     io_points.insert(scrutinee.clone(), pt_vec);
   }
 
-  for cand in match_queue.iter() {
-    match cand {
-      ExprT::Match(ex, branch) => {
-        for (p, exp) in branch.iter() {
-          let pt_map: &HashMap<String,Vec<usize>> = io_points.get(ex).unwrap();
-          match p {
-            PatternT::Ctor(s, t) => {
-              let pts = pt_map.get(s).unwrap();
-            },
-            _ => print!("p is not a ctor")
+  let mut completePrograms: HashSet<ExprT> = HashSet::new();
+  while !match_queue.is_empty() {
+    let mut valid_expr_map: HashMap<String, Vec<ExprT>> = HashMap::new();
+    let mut candidate: Option<ExprT> = match_queue.pop();
+    let test1 = candidate.clone().unwrap();
+    match candidate {
+      Some(un_cand) => match un_cand {
+        ExprT::Match(ex, branch) => {
+          let clonedBranch = branch.clone();
+          for (pattern, hole) in clonedBranch.iter() {
+            if(is_wildcard(hole.clone())){
+              let pt_map: &HashMap<String,Vec<usize>> = io_points.get(&ex).unwrap();
+              match pattern {
+                PatternT::Ctor(s, t) => {
+                    let pts: Vec<usize> = pt_map.get(s).unwrap().to_vec();
+                    let valid_exprs = fillMatchHoles(&pts,& points);
+                    // print!("Valid Exprs: {:?}", valid_exprs);
+                    for index in 0..valid_exprs.len(){
+                    let newCandidate = replace_branch(test1.clone(), valid_exprs[index].clone(), pattern.clone());
+                    if(is_match_complete(newCandidate.clone())) {
+                      completePrograms.insert(newCandidate.clone());
+                    } else {
+                      match_queue.push(newCandidate.clone())    
+                    }              
+                  }             
+                },
+                _ => print!("p is not a ctor")
+              }
+            }            
           }
-        }
+        },
+        _ => print!("{:?} not a match!\n", un_cand.clone()),
       },
-      _ => print!("{:?} not a match!\n", cand),
+      _ => print!("Pop from match queue failed")
+    }
+  }
+  if(!completePrograms.is_empty()){
+    return Some(completePrograms.iter().next().unwrap().clone());
+  } else {
+    return None;
+  }
+}
+
+fn fillMatchHoles(input_pts: &Vec<usize>, output_pts: &HashMap<ExprT, Vec<usize>>) -> Vec<ExprT>{
+  let mut satisfying_comp: Vec<ExprT> = Vec::new();
+  let input_pt_set: HashSet<usize> = input_pts.iter().copied().collect();
+  for (expr, output_pt) in output_pts.iter() {
+    if(input_pt_set.iter().all(|item| output_pt.contains(item))){
+      satisfying_comp.push(expr.clone());
+    }
+  }
+  return satisfying_comp;
+}
+
+fn replace_branch (candidate: ExprT, e: ExprT, pattern: PatternT) -> ExprT {
+  let mut newVec = Vec::new();
+  match candidate {
+    ExprT::Match(scrutinee, vec) => {
+      let mut first = true;
+      for (pat, expr) in vec {
+        if pattern == pat && is_wildcard(expr.clone()){
+          first = false;
+          newVec.push((pat, e.clone()));
+        } else {
+          newVec.push((pat, expr.clone()));
+        }
+      }
+      return ExprT::Match(scrutinee.clone(), newVec);
+    }
+    _ => {
+      print!("New candidate is not a vector");
+      ExprT::Wildcard
     }
   }
 }
 
-fn replace_branch (cand:ExprT, e: ExprT) {
-
+fn is_match_complete(candidate: ExprT) -> bool {
+  match candidate {
+    ExprT::Match(_, vec) => {
+      for (_, expr) in vec.iter() {
+        if is_wildcard(expr.clone()) {
+          return false;
+        }
+      }
+    }
+    _ => return false
+  }
+  return true;
 }
-
