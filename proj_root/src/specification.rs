@@ -1,4 +1,4 @@
-use crate::bool_band::get_declarations;
+use crate::list_stutter::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -133,7 +133,7 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
       let result: Option<Value> = evaluate_with_context(ec.clone(), e1.clone());
       match result {
         Some(r1) => {
-          //print!("Reached result {:?}\n", r1);
+          print!("Reached result {:?}\n", r1);
           if r1 == test.1 {
             (io_blocks[index]).1.push(expr.clone());
             //print!("{:?} satisfies IO example {:?}\n\n", expr, test);

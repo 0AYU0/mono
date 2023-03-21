@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod bool_band;
+mod list_stutter;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::bool_band::{*};
+use crate::list_stutter::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
