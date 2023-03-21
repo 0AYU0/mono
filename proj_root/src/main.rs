@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod list_stutter;
+mod bool_band;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::list_stutter::{*};
+use crate::bool_band::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
@@ -24,16 +24,21 @@ fn main() {
   let grow_funcs: Vec<fn(&HashSet<ExprT>, &SpecT, i32) -> HashSet<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
   let max_depth: i32 = 5;
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
+  let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); 
   let mut obs_eq: HashMap<String, ExprT> = HashMap::new();
   //print!("{:?}\n", plist);
   for curr_depth in 1..max_depth {
     //print!("Iteration: {:?}", curr_depth);
     plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
-    (plist, satisfying_blocks) = process_spec(&spec, &plist, &mut obs_eq);
+    (plist, satisfying_blocks, program_blocks) = process_spec(&spec, &plist, &mut obs_eq);
     print!("Plist: {:?}\n\n", plist);
     for block in satisfying_blocks.iter() {
       print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
     }
+    for (expr, pts) in program_blocks.iter() {
+      print!("Program Blocks: Expr: {:?}, Points {:?}\n\n", expr, pts);
+    }
+    grow_match(&spec, program_blocks);
   }
 
   let mut io_output = Vec::new();

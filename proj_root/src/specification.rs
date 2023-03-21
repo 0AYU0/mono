@@ -1,4 +1,4 @@
-use crate::list_stutter::get_declarations;
+use crate::bool_band::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -115,11 +115,12 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   return (ec, tc, td, vc)
 }
 
-pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>) {
+pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();
   let decls = get_declarations();
   let (ec, tc, td, vc) = process_decl_list(decls);
+  let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new();
 
   for test in io_examples.iter() {
     io_blocks.push((test.clone(), Vec::new()));
@@ -137,7 +138,6 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
           print!("Reached result {:?}\n", r1);
           if r1 == test.1 {
             (io_blocks[index]).1.push(expr.clone());
-            //print!("{:?} satisfies IO example {:?}\n\n", expr, test);
             outputs.push(true);
           } else {
             outputs.push(false);
@@ -151,6 +151,16 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
       index += 1;
     }
     let x = format!("{:?}", outputs);
+    let mut y = Vec::new();
+    for i in 0..outputs.len() {
+      if outputs[i] {
+        y.push(i);
+      }
+    }
+    if(y.len() > 0){
+      program_blocks.insert(expr.clone(), y);
+    }
+
     if !obs_eq.contains_key(&x){
       obs_eq.insert(x, expr.clone());
     }
@@ -159,5 +169,5 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
   for (_, value) in obs_eq.iter(){
     new_bank.insert(value.clone());
   }
-  return (new_bank, io_blocks);
+  return (new_bank, io_blocks, program_blocks);
 }

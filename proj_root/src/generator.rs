@@ -5,7 +5,7 @@ use crate::types::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::typecheck::{*};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashSet, HashMap};
 
 pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
   let (arg_ty, out_ty): (T, T) = spec.synth_type;
@@ -206,4 +206,74 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
 
 }
 
+//In the recursive case, may need to add more examples or have less pruning
+pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>)  {
+  let mut input_type = &spec.synth_type.0;
+  let mut scrutinees: HashMap<ExprT, T> = HashMap::new();
+  let mut match_queue: Vec<ExprT> = Vec::new();
+  let mut io_points: HashMap<ExprT, HashMap<String,Vec<usize>>> = HashMap::new(); 
+  let io_examples = &spec.spec;
+
+  match input_type {
+    T::Tuple(vec) => {
+      for i in 0..vec.len() {
+        let expr = ExprT::Proj(i as i32, Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string())));
+        let arg_ty = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, &expr);
+        match arg_ty {
+          Some(ty) => {
+            scrutinees.insert(expr, ty);
+          }
+          None => print!("{:?} does not typecheck\n", expr)
+        }
+      }
+    }
+    _ => print!("Input type was not a tuple\n") 
+  }
+
+
+  for (scrutinee, _) in scrutinees.iter() {
+    let mut pt_vec: HashMap<String, Vec<usize>> = HashMap::new();
+    let mut index = 0;
+    for (input, _) in io_examples.iter() {
+      let test_i = exp_of_value(input.clone()).unwrap();
+      let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), scrutinee.clone());
+      let result: Option<Value> = evaluate_with_context(spec.ec.clone(), e1.clone());
+      match result {
+        Some(CtorV(s, _)) => {
+          pt_vec.entry(s)
+              .or_insert(Vec::new())
+              .push(index);
+        }
+        //should be some ctorV, sc_ty is the type that the scrutinee evaluates to
+        _ => print!("Unable to evaluate {:?}\n", e1) 
+      }
+      index += 1;
+    }
+    print!("Projection: {:?}, Points: {:?}\n", scrutinee, pt_vec);
+
+    match_queue.push(ExprT::Match(Box::new(scrutinee.clone()), pt_vec.keys().map(|s| (PatternT::Ctor(s.to_string(), Box::new(PatternT::Wildcard)), ExprT::Wildcard)).collect()));
+    io_points.insert(scrutinee.clone(), pt_vec);
+  }
+
+  for cand in match_queue.iter() {
+    match cand {
+      ExprT::Match(ex, branch) => {
+        for (p, exp) in branch.iter() {
+          let pt_map: &HashMap<String,Vec<usize>> = io_points.get(ex).unwrap();
+          match p {
+            PatternT::Ctor(s, t) => {
+              let pts = pt_map.get(s).unwrap();
+            },
+            _ => print!("p  is not a ctor")
+          }
+        }
+      },
+      _ => print!("{:?} not a match!\n", cand),
+    }
+  }
+}
+
+fn replace_branch (cand:ExprT, e: ExprT) {
+
+}
 

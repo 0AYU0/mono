@@ -17,7 +17,7 @@ pub fn get_list() -> T {
 }
 
 pub fn get_synth_type() -> (T, T) {
-  return (Named("list".to_string()), Named("list".to_string()));
+  return (T::Tuple(Named("list".to_string())), Named("list".to_string()));
 }
 
 pub fn get_eval_context() -> EvalContext {
