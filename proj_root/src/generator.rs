@@ -50,7 +50,7 @@ pub fn grow_app(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet
         None => print!("Typecheck failed on: {:?}\n", *expr1),
       } 
   }
-  //print!("{:?} at iteration {:?}\n", new_bank, curr_depth);
+  print!("Growing app: {:?}\n", new_bank);
   return new_bank;
 }
 
@@ -153,6 +153,7 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
       }*/
     }
   }
+  print!("Growing ctor: {:?}\n", expression_bank);
   return expression_bank;
 }
 
@@ -191,12 +192,37 @@ pub fn grow_unctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> Hash
           if s_ty == *parent_ty && !(*arg_ty == T::_unit()) {
             expression_bank.insert(ExprT::Unctor(s1.to_string(), Box::new(expr.clone())));
           }
-          //print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
+          print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
         },
         None => print!("Typecheck failed on: {:?}\n", *expr),
       }
     }
   }
+  let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, &ExprT::Var(TARGET_FUNC_ARG.to_string()));
+  match ty {
+    Some(s_ty) => {
+      match s_ty {
+        Named(s1) => {
+          let td = spec.td.get(&s1).unwrap();
+          match td {
+            T::Variant(vec) => {
+              let test :Vec<&String>= vec.iter().map(|((s2, arg_ty))| {
+                if !(*arg_ty == T::_unit()) {
+                  expression_bank.insert(ExprT::Unctor(s2.to_string(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))));
+                }
+                s2
+              }).collect();
+              print!("Test: {:?}", test)
+            },
+            _ => ()
+          }          
+        }
+        _ => ()
+      }
+    },
+    None => print!("Typecheck failed"),
+  }
+  print!("Growing unctor: {:?}\n", expression_bank);
   return expression_bank;
 }
 
@@ -238,7 +264,7 @@ pub fn grow_tuple_helper(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32, c
 
 pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let mut new_bank: HashSet<ExprT> = HashSet::new(); 
-  if curr_depth == 1{
+  if curr_depth == 1 {
     let input_ty: &T = &spec.synth_type.0;
     match input_ty {
       T::Tuple(vec) => {
@@ -251,21 +277,27 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
     return new_bank;
   }
   for component in bank.iter() {
-    match component {
-      ExprT::Tuple(vec) => {
-        for size in 0..vec.len() {
-          new_bank.insert(ExprT::Proj(size.try_into().unwrap(), Box::new(component.clone())));
-        }
+    let ty = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, &component);
+    match ty {
+      Some(res) => {
+        match res {
+            T::Tuple(vec) => {
+              for size in 0..vec.len() {
+                new_bank.insert(ExprT::Proj(size.try_into().unwrap(), Box::new(component.clone())));
+              }
+            }
+            _ => ()
+          }
+        },
+        _ => ()
       }
-      _ => ()
     }
-  }
+  print!("Growing proj: {:?}\n", new_bank);
   return new_bank;
-
 }
 
 //In the recursive case, may need to add more examples or have less pruning
-pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs: HashMap<T, HashSet<ExprT>>) -> Option<ExprT> {
+pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs: HashMap<T, HashSet<ExprT>>, complete_matches: &mut Vec<ExprT>) -> Option<Vec<ExprT>> {
   let mut input_type = &spec.synth_type.0;
   let mut scrutinees: HashMap<ExprT, T> = HashMap::new();
   let mut match_queue: Vec<ExprT> = Vec::new();
@@ -300,9 +332,9 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     for (input, _) in io_examples.iter() {
       let test_i = exp_of_value(input.clone()).unwrap();      
       let e1 = replace(&TARGET_FUNC_ARG.to_string(), test_i.clone(), scrutinee.clone());
-      print!("e1: {:?}\n", e1);  
+      //print!("e1: {:?}\n", e1);  
       let result: Option<Value> = evaluate_with_context(spec.ec.clone(), e1.clone());
-      print!("result: {:?}\n", result);  
+      //print!("result: {:?}\n", result);  
       match result {
         Some(CtorV(s, _)) => {
           available_uncons.insert(ExprT::Unctor(s.to_string(), Box::new(scrutinee.clone())));
@@ -320,7 +352,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     match_queue.push(ExprT::Match(Box::new(scrutinee.clone()), pt_vec.keys().map(|s| (PatternT::Ctor(s.to_string(), Box::new(PatternT::Wildcard)), ExprT::Wildcard)).collect()));
     io_points.insert(scrutinee.clone(), pt_vec);
   }
-  print!("Available Uncons: {:?}\n", available_uncons);
+  //print!("Available Uncons: {:?}\n", available_uncons);
   print!("ty_to_exprs: {:?}\n", ty_to_exprs);
   let mut completePrograms: HashSet<ExprT> = HashSet::new();
   while !match_queue.is_empty() {
@@ -344,8 +376,9 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
                     let temp = scrutinees.iter().map(|(s,_)| scrut.insert(s.clone()));
                     let mut rec_expr: HashSet<ExprT> = get_valid_recursive_components(&spec.synth_type.1, &ty_to_exprs, &available_uncons, &scrut);
                     let mut rec_vec = Vec::from_iter(rec_expr).clone();
-                    print!("Rec Exprs: {:?}\n", rec_vec);
+                    //print!("Rec Exprs: {:?}\n", rec_vec);
                     valid_exprs.append(&mut rec_vec);
+                    valid_exprs.append(complete_matches);
                     for index in 0..valid_exprs.len(){
                     let newCandidate = replace_branch(test1.clone(), valid_exprs[index].clone(), pattern.clone());
                     if(is_match_complete(newCandidate.clone())) {
@@ -366,7 +399,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     }
   }
   if(!completePrograms.is_empty()){
-    return Some(completePrograms.iter().next().unwrap().clone());
+    return Some(Vec::from_iter(completePrograms).clone());
   } else {
     return None;
   }
