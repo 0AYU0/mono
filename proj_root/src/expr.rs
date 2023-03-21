@@ -1,6 +1,7 @@
 use egg::LanguageChildren;
 use std::cmp::{min, max};
-use std::collections::HashMap;
+use std::collections::{HashMap,HashSet};
+use std::hash::Hash;
 use crate::specification::{*};
 use std::fmt;
 
@@ -83,7 +84,7 @@ impl fmt::Debug for ExprT {
                   result
               },
               ExprT::Fix(i, t, e1) => format!("let rec ({i}: {t}) =\n{}", show(e1, indent + 1), i = i, t = t),
-              ExprT::Tuple(es) => format!("{}",
+              ExprT::Tuple(es) => format!("[{}]",
                   es.iter().map(|e| show(e, 0)).collect::<Vec<_>>().join(", ")
               ),
               ExprT::Proj(i, e1) => format!("({}).{}", show(e1, 0), i),
@@ -183,6 +184,106 @@ fn children_of_expr (expr: &ExprT) -> Vec<&ExprT> {
     ExprT::Fix (_, _, e) => vec![e],
     ExprT::Tuple (es) => es.iter().map(|x| x).collect(),
     ExprT::Proj (_, e) => vec![e],
+  }
+}
+
+pub fn get_recursive_calls(e: &ExprT) -> HashSet<ExprT> {
+  match e {
+      ExprT::App(e1, e2) => {
+          let e1_copy = e1.clone();
+          match *e1_copy {
+            ExprT::Var(i) if i == TARGET_FUNC => {
+              let mut set = HashSet::new();
+              set.insert(e.clone());
+              set
+            },
+            _ => {
+              let mut set = get_recursive_calls(e1);
+              set.extend(get_recursive_calls(e2));
+              set
+            }
+          }
+      }
+      ExprT::Func(_, e) => get_recursive_calls(e),
+      ExprT::Ctor(_, e) => get_recursive_calls(e),
+      ExprT::Unctor(_, e) => get_recursive_calls(e),
+      ExprT::Eq(_, e1, e2) => {
+          let mut set = get_recursive_calls(e1);
+          set.extend(get_recursive_calls(e2));
+          set
+      }
+      ExprT::Match(e, patterns) => {
+          let mut set = get_recursive_calls(e);
+          for (_, e) in patterns {
+              set.extend(get_recursive_calls(e));
+          }
+          set
+      }
+      ExprT::Fix(_, _, e) => get_recursive_calls(e),
+      ExprT::Tuple(es) => {
+          let mut set = HashSet::new();
+          for e in es {
+              set.extend(get_recursive_calls(e));
+          }
+          set
+      }
+      ExprT::Proj(_, e) => get_recursive_calls(e),
+      _ => HashSet::new(),
+  }
+}
+
+pub fn get_unconstructors(e: &ExprT) -> HashSet<ExprT> {
+  match e {
+      ExprT::App(e1, e2) => get_unconstructors(e1).union(&get_unconstructors(e2)).cloned().collect(),
+      ExprT::Func(_, e) => get_unconstructors(e),
+      ExprT::Ctor(_, e) => get_unconstructors(e),
+      ExprT::Unctor(_, e) => {let mut set = get_unconstructors(e); set.insert(*e.clone()); set},
+      ExprT::Eq(_, e1, e2) => get_unconstructors(e1).union(&get_unconstructors(e2)).cloned().collect(),
+      ExprT::Match(e, patterns) => {
+          patterns.iter().fold(HashSet::new(), |acc, (_, e)| acc.union(&get_unconstructors(e)).cloned().collect())
+      }
+      ExprT::Fix(_, _, e) => get_unconstructors(e),
+      ExprT::Tuple(es) => es.iter().fold(HashSet::new(), |acc, e| acc.union(&get_unconstructors(e)).cloned().collect()),
+      ExprT::Proj(_, e) => get_unconstructors(e),
+      _ => HashSet::new(),
+  }
+}
+
+pub fn using_allowed_unconstructor(expr: &ExprT, available_uncons: &HashSet<ExprT>) -> bool {
+  get_unconstructors(expr).is_subset(available_uncons)
+}
+
+pub fn count_recursions(e: &ExprT) -> i32 {
+  match e {
+      ExprT::Var(i) => {
+          if i == TARGET_FUNC {
+              1
+          } else {
+              0
+          }
+      }
+      ExprT::App(e1, e2) => count_recursions(e1) + count_recursions(e2),
+      ExprT::Func(_, e) => count_recursions(e),
+      ExprT::Ctor(_, e) => count_recursions(e),
+      ExprT::Unctor(_, e) => count_recursions(e),
+      ExprT::Eq(_, e1, e2) => count_recursions(e1) + count_recursions(e2),
+      ExprT::Match(e, patterns) => {
+          let mut count = 0;
+          for (_, e) in patterns {
+              count += count_recursions(e);
+          }
+          count
+      }
+      ExprT::Fix(_, _, e) => count_recursions(e),
+      ExprT::Tuple(es) => {
+          let mut count = 0;
+          for e in es {
+              count += count_recursions(e);
+          }
+          count
+      }
+      ExprT::Proj(_, e) => count_recursions(e),
+      _ => 0,
   }
 }
 
@@ -439,7 +540,9 @@ pub fn evaluate(e: ExprT) -> Option<Value> {
       let v = evaluate(*e)?;
       match v {
         Value::CtorV(i1, v1) => {
-          assert_eq!(i, i1);
+          if i != i1 {
+            return None
+          }
           Some(*v1)
         },
         _ => None

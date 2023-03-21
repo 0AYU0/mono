@@ -17,7 +17,7 @@ pub fn get_list() -> T {
 }
 
 pub fn get_synth_type() -> (T, T) {
-  return (T::Tuple(vec![Named("list".to_string())]), Named("list".to_string()));
+  return (T::Tuple(vec![Named("list".to_string())]), Named("nat".to_string()));
 }
 
 pub fn get_eval_context() -> EvalContext {
@@ -48,7 +48,7 @@ pub fn get_synth_examples() -> Vec<(Value, Value)> {
   let nil: Value = CtorV("Nil".to_string(), Box::new(TupleV(Vec::new())));
   let zero = CtorV("O".to_string(), Box::new(TupleV(Vec::new())));
   let one = CtorV("S".to_string(), Box::new(zero.clone()));
-  let cons_two: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])));
-  let cons_four: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![one.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])))])))])));
-  return vec![(nil.clone(), nil.clone()), (cons_two, cons_four)];
+  let two =  CtorV("S".to_string(), Box::new(one.clone()));
+  let cons_two: Value = CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()])))])));
+  return vec![(nil.clone(), zero.clone()), (CtorV("Cons".to_string(), Box::new(TupleV(vec![zero.clone(), nil.clone()]))), one.clone()), (cons_two.clone(), two.clone())];
 }

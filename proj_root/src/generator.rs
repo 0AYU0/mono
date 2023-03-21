@@ -346,3 +346,38 @@ fn is_match_complete(candidate: ExprT) -> bool {
   }
   return true;
 }
+
+pub fn get_valid_recursive_components(
+  desired_ty: T,
+  ty_to_exprs: &HashMap<T, HashSet<ExprT>>,
+  available_uncons: &HashSet<ExprT>,
+  scrutinees: &HashSet<ExprT>,
+) -> HashSet<ExprT> {
+  let empty = HashSet::new();
+  let exprs = ty_to_exprs.get(&desired_ty).unwrap_or(&empty);
+  exprs
+      .iter()
+      .filter(|e| count_recursions(*e) > 0)
+      .filter(|e| using_allowed_unconstructor(*e, available_uncons))
+      .filter(|e| {
+          let call_exprs = get_recursive_calls(&e);
+          call_exprs.iter().all(|call| match call {
+            ExprT::App(_, arg_exp) => {
+                  let es = match *arg_exp.clone() {
+                      ExprT::Tuple(es) => es,
+                      _ => vec![*arg_exp.clone()],
+                  };
+                  es.iter().all(|e| {
+                      // argument contains unconstructor: termination guaranteed
+                      !get_unconstructors(e).is_empty()
+                          || // otherwise, at least it should not be a scrutinee to guarantee termination
+                          // e.g., match x with S _ -> f(x) ===> infinite recursion!
+                          !scrutinees.contains(e)
+                  })
+              }
+              _ => unreachable!(),
+          })
+      })
+      .cloned()
+      .collect()
+}

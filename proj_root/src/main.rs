@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod bool_impl;
+mod list_length;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::bool_impl::{*};
+use crate::list_length::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
@@ -22,7 +22,7 @@ fn main() {
   
   let mut plist: HashSet<ExprT> = HashSet::from_iter(vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()),  Var(TARGET_FUNC.to_string())].iter().cloned());
   let grow_funcs: Vec<fn(&HashSet<ExprT>, &SpecT, i32) -> HashSet<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
-  let max_depth: i32 = 5;
+  let max_depth: i32 = 4;
   let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
   let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); 
   let mut obs_eq: HashMap<String, ExprT> = HashMap::new();

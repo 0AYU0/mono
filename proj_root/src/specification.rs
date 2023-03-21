@@ -1,4 +1,4 @@
-use crate::bool_impl::get_declarations;
+use crate::list_length::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -130,6 +130,7 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
   for test in io_examples.iter() {
     io_blocks.push((test.clone(), Vec::new()));
   } 
+  let mut new_bank = HashSet::new();
   for expr in bank.iter() {
     let mut outputs = Vec::new();
     let mut index = 0;
@@ -141,6 +142,7 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
       match result {
         Some(r1) => {
           print!("Reached result {:?}\n", r1);
+          new_bank.insert(expr.clone());
           if r1 == test.1 {
             (io_blocks[index]).1.push(expr.clone());
             outputs.push(true);
@@ -170,7 +172,6 @@ pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<S
       obs_eq.insert(x, expr.clone());
     }
   }
-  let mut new_bank = HashSet::new();
   for (_, value) in obs_eq.iter(){
     new_bank.insert(value.clone());
   }
