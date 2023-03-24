@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod bool_band;
+mod bool_impl;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::bool_band::{*};
+use crate::bool_impl::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
@@ -25,12 +25,12 @@ fn main() {
   
   //Map expressions to satisfying IO examples and components
   let mut plist: HashSet<ExprT> = HashSet::from_iter(vec![ExprT::Tuple(Vec::new()), Var(TARGET_FUNC_ARG.to_string()),  Var(TARGET_FUNC.to_string())].iter().cloned());
-  let grow_funcs: Vec<fn(&HashSet<ExprT>, &SpecT, i32) -> HashSet<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_proj];
-  let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); 
-  let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); 
-  let mut obs_eq: HashMap<String, ExprT> = HashMap::new();
-  let mut ty_to_exprs: HashMap<T, HashSet<ExprT>> = HashMap::new();
-  let mut complete_matches: Vec<ExprT> = Vec::new();
+  let grow_funcs: Vec<fn(&HashSet<ExprT>, &SpecT, i32) -> HashSet<ExprT>> = vec![grow_app, grow_ctor, grow_unctor, grow_eq, grow_tuple, grow_proj];
+  let mut satisfying_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new(); //Mapping of IO examples to expressions satisfying those examples
+  let mut program_blocks: HashMap<ExprT, Vec<usize>> = HashMap::new(); //Mapping of expressions to indices of IO examples
+  let mut obs_eq: HashMap<String, ExprT> = HashMap::new();             //Mapping of program behaviors (ex. observational equivalence)
+  let mut ty_to_exprs: HashMap<T, HashSet<ExprT>> = HashMap::new();    //Mapping of types to expressions of that type
+  let mut complete_matches: Vec<ExprT> = Vec::new();                   //Vector of match expressions for use as later components
 
   // Set depth
   let mut curr_depth = 1;
@@ -40,13 +40,13 @@ fn main() {
   while curr_depth < max_depth {
     plist = grow_funcs.iter().fold(plist.clone(), |mut acc, grow_func| {acc.extend(grow_func(&plist, &spec, curr_depth)); acc});
     (plist, satisfying_blocks, program_blocks, ty_to_exprs) = process_spec(&spec, &plist, &mut obs_eq);
-    print!("Plist: {:?}\n\n", plist);
+    /*print!("Plist: {:?}\n\n", plist);
     for block in satisfying_blocks.iter() {
       print!("Satisfying Blocks: IO Example - {:?}, Blocks - {:?}\n\n", block.0, block.1);
     }
     for (expr, pts) in program_blocks.iter() {
       print!("Program Blocks: Expr: {:?}, Points {:?}\n\n", expr, pts);
-    }
+    }*/
 
     // Add top down propogation for match expressions
     let res: Option<Vec<ExprT>> = grow_match(&spec, program_blocks, ty_to_exprs, &mut complete_matches.clone());
@@ -54,7 +54,7 @@ fn main() {
       Some(ex) => {
         let matchesClone = ex.clone();
         complete_matches = ex;
-        print!("Found complete program: \n{:?}\n", wrap(spec.clone(), matchesClone.iter().next().unwrap().clone()));
+        print!("\n{:?}\n", wrap(spec.clone(), matchesClone.iter().next().unwrap().clone()));
         return;
       },
       _ => {curr_depth += 1;}

@@ -1,4 +1,4 @@
-use crate::bool_band::get_declarations;
+use crate::bool_impl::get_declarations;
 use crate::types::T;
 use crate::expr::ExprT;
 use crate::expr::{*};
@@ -20,14 +20,14 @@ type t_unprocessed = string list (* import file list *)
 [@@deriving show]
 */
 
-pub type EvalContext = HashMap<String, ExprT>;
-pub type TypeContext = HashMap<String, T>;
-pub type TypeDefinition = HashMap<String, T>;
-pub type VariantContext = HashMap<String, (T, T)>;
+pub type EvalContext = HashMap<String, ExprT>; // External function names to corresponding expressions ex. add x -> S(x)
+pub type TypeContext = HashMap<String, T>;     // Internal variables to corresponding types ex. x (function arg parameter) -> bool
+pub type TypeDefinition = HashMap<String, T>;  // Mapping of external type ex. bool -> Variant(True, False)
+pub type VariantContext = HashMap<String, (T, T)>; // Mapping of variant_type -> (arg_type, parent_type / resulting type)
 
 #[derive(Clone, Debug)]
 pub struct SpecT {
-  pub synth_type: (T, T),
+  pub synth_type: (T, T),       
   pub ec: EvalContext,
   pub tc: TypeContext,
 	pub td: TypeDefinition,
@@ -35,8 +35,9 @@ pub struct SpecT {
   pub spec: Vec<(Value, Value)>,
 }
 
+
 impl SpecT {
-  // A public constructor method
+  // A public constructor method for a new behavioral specification
   pub fn new(synth_type: (T, T), ec: EvalContext, tc: TypeContext, td: TypeDefinition, vc: VariantContext, spec: Vec<(Value, Value)>) -> SpecT {
     SpecT {
           synth_type: synth_type,
@@ -49,6 +50,11 @@ impl SpecT {
   }
 }
 
+/* 
+  Transforms the input synthesis type from a set of arrow functions to a tuple
+  list -> nat becomes (list, nat)
+  bool -> bool -> bool becomes ((bool, bool), bool)
+*/
 fn st_to_pair (synth_type: T) -> (T, T) {
   fn f (mut acc: Vec<T>, t: T) -> (Vec<T>, T) {
     match t {
@@ -70,6 +76,7 @@ fn st_to_pair (synth_type: T) -> (T, T) {
   }
 }
 	
+/* Extract all variants from a type declaration ex. Named("bool") -> Vec<("True"), ...), ("False", ...)>*/
 fn extract_variants (t: T) -> Vec<(String, T)>{
   match t {
     T::Named(_) => Vec::new(),
@@ -91,6 +98,7 @@ pub fn expected_sig (spec: &SpecT) -> Vec<Value> {
   return output_bank;
 }
 
+/* Process external types and function operators provided in the specification */
 pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, TypeDefinition, VariantContext){
   let mut ec:EvalContext = HashMap::new();
   let mut tc:TypeContext = HashMap::new();
@@ -117,6 +125,10 @@ pub fn process_decl_list(decls: Vec<Declaration>) -> (EvalContext, TypeContext, 
   return (ec, tc, td, vc)
 }
 
+/*
+  Input: Specification, bank of components, and current observational equivalence mapping
+  Output: Tuple of (valid expressions, map IO example to satisfying expressions, map IO examples to satisfying ,types to expressions)
+ */
 pub fn process_spec (spec: &SpecT, bank: &HashSet<ExprT>, obs_eq: &mut HashMap<String, ExprT>) -> (HashSet<ExprT>, Vec<((Value, Value), Vec<ExprT>)>, HashMap<ExprT, Vec<usize>>, HashMap<T, HashSet<ExprT>>) {
   let io_examples: &Vec<(Value, Value)>= &spec.spec;
   let mut io_blocks: Vec<((Value, Value), Vec<ExprT>)> = Vec::new();

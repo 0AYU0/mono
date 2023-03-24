@@ -3,6 +3,7 @@ use crate::expr::{ExprT, PatternT};
 use crate::types::T::{*, self};
 use crate::types::{*};
 
+/* Unwrap a type to each of its variants (or its own) defintions*/
 pub fn concretify(td: &TypeDefinition, t: &T) -> T{
   match t {
     Named(s) => {
@@ -44,6 +45,7 @@ pub fn typecheck_pattern(td: &TypeDefinition, p: &PatternT, t: &T) -> Option<Vec
   }
 }
 
+/* Typecheck and evaluate an expression against the specification's type definitions and contexts */
 pub fn typecheck(ec: &EvalContext, tc: &TypeContext, td: &TypeDefinition, vc: &VariantContext, e: &ExprT) -> Option<T> {
   match e {
     ExprT::Wildcard => None,

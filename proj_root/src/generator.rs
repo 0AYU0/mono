@@ -10,6 +10,7 @@ use crate::typecheck::{*};
 use std::collections::{BTreeSet, HashSet, HashMap};
 use std::hash::Hash;
 
+/* Given a solution expression, wraps around it as recursive  */
 pub fn wrap(spec: SpecT, e: ExprT) -> ExprT {
   let (arg_ty, out_ty): (T, T) = spec.synth_type;
   let func = ExprT::Func(Param { p_name: TARGET_FUNC_ARG.to_string(), p_type: arg_ty.clone() }, Box::new(e));
@@ -31,11 +32,15 @@ pub fn grow_app(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet
       match t1 {
         Some(r_t1) => {
           match r_t1 {
+
+            //Our first expression must be a function T:Arrow()
             Arrow(arg_ty, _) => {
               for expr2 in bank.iter() {   
                 let t2: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr2);
                 match t2 {
                   Some(r_t2) => { 
+
+                    //Our second expression must typecheck to the input argument of the first
                     if *arg_ty == r_t2 {
                       new_bank.insert(ExprT::App(Box::new(expr1.clone()), Box::new(expr2.clone())));
                     }
@@ -79,29 +84,12 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
     }
   }*/
 
-  /*for t in vec.iter() { //Iterating each named type
-          match t {
-            Named(named_type) => { //Either nat or list or something
-              for expr in bank.iter() {
-                let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
-                match ty {
-                  Some(s_ty) => { 
-                    if *t == s_ty { //If the named type in the tuple matches up with the typecheck of the expression
-                      possibleOne.push(expr.clone());
-                    }
-                  }
-                  None => print!("Typecheck failed on: {:?}\n", *expr),
-                }
-              }
-            }
-            _ => print!("T inside Tuple is not Named: {:?}\n", *t)
-          }
-        } */
-
   let mut expression_bank: HashSet<ExprT> = HashSet::new();
   //Need to do extra pruning since the constructors can only act on certain types based on what is in the 'named'
   for (s1, (arg_ty, parent_ty)) in variant_context.iter() { //Might be a (Tuple, Named), or (Named, Named)
     match arg_ty {
+      
+      //Typechecking on a constructor of multiple expressions ex. cons(nat, list)
       T::Tuple(vec) => {
         if vec.len() == 0 {
           expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![]))));
@@ -133,7 +121,9 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
           }
         }
       }
-      T::Named(str) => {
+
+      //Typechecking on a constructor of a single argument, compared against the argument as a whole
+      T::Named(_) => {
         for expr in bank.iter() {
           let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, expr);
           match ty {
@@ -198,6 +188,8 @@ pub fn grow_unctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> Hash
       }
     }
   }
+
+  // Compare directly with the function argument, since the input may vary - we do not have to typecheck againt the parent
   let ty: Option<T> = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, &ExprT::Var(TARGET_FUNC_ARG.to_string()));
   match ty {
     Some(s_ty) => {
@@ -238,6 +230,7 @@ pub fn grow_eq(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<
   return HashSet::new();
 }
 
+//No typechecking, call a helper function - may be bloated since tuples can get continually nested and grow exponentially based on the input depth
 pub fn grow_tuple(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let mut new_bank: HashSet<ExprT> = HashSet::new();
   let vector_tuples: HashSet<Vec<ExprT>> = grow_tuple_helper(bank, spec, curr_depth, HashSet::from_iter(vec![Vec::new()].iter().cloned())); 
@@ -262,8 +255,11 @@ pub fn grow_tuple_helper(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32, c
   return grow_tuple_helper(bank, spec, curr_depth - 1, new_tuples); 
 }
 
+// Retrieve an element within a tuple
 pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSet<ExprT> {
   let mut new_bank: HashSet<ExprT> = HashSet::new(); 
+
+  // At the base depth, add projections on the input argument
   if curr_depth == 1 {
     let input_ty: &T = &spec.synth_type.0;
     match input_ty {
@@ -276,6 +272,8 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
     }
     return new_bank;
   }
+
+  //If the given component evaluates to some tuple
   for component in bank.iter() {
     let ty = typecheck(&spec.ec, &spec.tc, &spec.td, &spec.vc, &component);
     match ty {
@@ -304,6 +302,8 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
   let mut io_points: HashMap<ExprT, HashMap<String,Vec<usize>>> = HashMap::new(); 
   let io_examples = &spec.spec;
 
+
+  // The scrutinee (match parameter) is based on the input
   match input_type {
     T::Tuple(vec) => {
       for i in 0..vec.len() {
@@ -323,8 +323,8 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     _ => print!("Input type was not a tuple\n") 
   }
 
+  // Based on each scrutinee, if it can be an inductive type, add unconstructors on the given input parameter
   let mut available_uncons:HashSet<ExprT> = HashSet::new();
-
   for (scrutinee, _) in scrutinees.iter() {
     print!("Scrutinees: {:?}\n", scrutinee);  
     let mut pt_vec: HashMap<String, Vec<usize>> = HashMap::new();
@@ -405,6 +405,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
   }
 }
 
+// Given a set of input and output points, return a set of expressions that satisfy each of the inputs in the match branch
 fn fillMatchHoles(input_pts: &Vec<usize>, output_pts: &HashMap<ExprT, Vec<usize>>) -> Vec<ExprT>{
   let mut satisfying_comp: Vec<ExprT> = Vec::new();
   let input_pt_set: HashSet<usize> = input_pts.iter().copied().collect();
@@ -416,6 +417,8 @@ fn fillMatchHoles(input_pts: &Vec<usize>, output_pts: &HashMap<ExprT, Vec<usize>
   return satisfying_comp;
 }
 
+
+//Given a candidate match statement, and a pattern to match, return a new match statement with the inserted expression on that branch
 fn replace_branch (candidate: ExprT, e: ExprT, pattern: PatternT) -> ExprT {
   let mut newVec = Vec::new();
   match candidate {
