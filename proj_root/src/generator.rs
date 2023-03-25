@@ -92,7 +92,7 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
       //Typechecking on a constructor of multiple expressions ex. cons(nat, list)
       T::Tuple(vec) => {
         if vec.len() == 0 {
-          expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![]))));
+          expression_bank.insert(normalize(&ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![])))));
         } else {
           let mut possibleTwo: Vec<(ExprT, ExprT)> = Vec::new(); //Get all of the possible tuples of expressions
           for expr1 in bank.iter() {
@@ -117,7 +117,7 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
             }
           }
           for (first, second) in possibleTwo.iter() {
-            expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![first.clone(), second.clone()]))));
+            expression_bank.insert(normalize(&ExprT::Ctor(s1.to_string(), Box::new(ExprT::Tuple(vec![first.clone(), second.clone()])))));
           }
         }
       }
@@ -129,7 +129,7 @@ pub fn grow_ctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
           match ty {
             Some(s_ty) => {
               if *arg_ty == s_ty {
-                expression_bank.insert(ExprT::Ctor(s1.to_string(), Box::new(expr.clone())));
+                expression_bank.insert(normalize(&ExprT::Ctor(s1.to_string(), Box::new(expr.clone()))));
               }
             }
             None => print!("Typecheck failed on: {:?}\n", *expr),
@@ -180,9 +180,9 @@ pub fn grow_unctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> Hash
       match ty {
         Some(s_ty) => {
           if s_ty == *parent_ty && !(*arg_ty == T::_unit()) {
-            expression_bank.insert(ExprT::Unctor(s1.to_string(), Box::new(expr.clone())));
+            expression_bank.insert(normalize(&ExprT::Unctor(s1.to_string(), Box::new(expr.clone()))));
           }
-          print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
+          //print!("Typecheck worked on: {:?} with {:?}\n", *expr, s_ty)
         },
         None => print!("Typecheck failed on: {:?}\n", *expr),
       }
@@ -200,7 +200,7 @@ pub fn grow_unctor(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> Hash
             T::Variant(vec) => {
               let test :Vec<&String>= vec.iter().map(|((s2, arg_ty))| {
                 if !(*arg_ty == T::_unit()) {
-                  expression_bank.insert(ExprT::Unctor(s2.to_string(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string()))));
+                  expression_bank.insert(normalize(&ExprT::Unctor(s2.to_string(), Box::new(ExprT::Var(TARGET_FUNC_ARG.to_string())))));
                 }
                 s2
               }).collect();
@@ -290,7 +290,7 @@ pub fn grow_proj(bank: &HashSet<ExprT>, spec: &SpecT, curr_depth: i32) -> HashSe
         _ => ()
       }
     }
-  print!("Growing proj: {:?}\n", new_bank);
+  //print!("Growing proj: {:?}\n", new_bank);
   return new_bank;
 }
 
@@ -352,8 +352,8 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
     match_queue.push(ExprT::Match(Box::new(scrutinee.clone()), pt_vec.keys().map(|s| (PatternT::Ctor(s.to_string(), Box::new(PatternT::Wildcard)), ExprT::Wildcard)).collect()));
     io_points.insert(scrutinee.clone(), pt_vec);
   }
-  //print!("Available Uncons: {:?}\n", available_uncons);
-  print!("ty_to_exprs: {:?}\n", ty_to_exprs);
+  print!("Available Uncons: {:?}\n", available_uncons);
+  //print!("ty_to_exprs: {:?}\n", ty_to_exprs);
   let mut completePrograms: HashSet<ExprT> = HashSet::new();
   while !match_queue.is_empty() {
     let mut valid_expr_map: HashMap<String, Vec<ExprT>> = HashMap::new();
@@ -371,12 +371,12 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
               match pattern {
                 PatternT::Ctor(s, t) => {
                     let pts: Vec<usize> = pt_map.get(s).unwrap().to_vec();
-                    let mut valid_exprs:Vec<ExprT> = fillMatchHoles(&pts,& points);
+                    let mut valid_exprs:Vec<ExprT> = fill_match_holes(&pts,& points);
                     let mut scrut: HashSet<ExprT> = HashSet::new();
                     let temp = scrutinees.iter().map(|(s,_)| scrut.insert(s.clone()));
                     let mut rec_expr: HashSet<ExprT> = get_valid_recursive_components(&spec.synth_type.1, &ty_to_exprs, &available_uncons, &scrut);
                     let mut rec_vec = Vec::from_iter(rec_expr).clone();
-                    //print!("Rec Exprs: {:?}\n", rec_vec);
+                    print!("Rec Exprs: {:?}\n", rec_vec);
                     valid_exprs.append(&mut rec_vec);
                     valid_exprs.append(complete_matches);
                     for index in 0..valid_exprs.len(){
@@ -406,7 +406,7 @@ pub fn grow_match(spec: &SpecT, points: HashMap<ExprT, Vec<usize>>, ty_to_exprs:
 }
 
 // Given a set of input and output points, return a set of expressions that satisfy each of the inputs in the match branch
-fn fillMatchHoles(input_pts: &Vec<usize>, output_pts: &HashMap<ExprT, Vec<usize>>) -> Vec<ExprT>{
+fn fill_match_holes(input_pts: &Vec<usize>, output_pts: &HashMap<ExprT, Vec<usize>>) -> Vec<ExprT>{
   let mut satisfying_comp: Vec<ExprT> = Vec::new();
   let input_pt_set: HashSet<usize> = input_pts.iter().copied().collect();
   for (expr, output_pt) in output_pts.iter() {

@@ -255,6 +255,35 @@ pub fn using_allowed_unconstructor(expr: &ExprT, available_uncons: &HashSet<Expr
   return satisfy;
 }
 
+pub fn normalize(expr: &ExprT) -> ExprT{
+  match expr {
+    ExprT::Ctor(i1, e1) => {
+      match *e1.clone() {
+        ExprT::Unctor(i2, e2) => {
+          if i1.eq(&i2) { return normalize(&e2); } 
+          else { return ExprT::Ctor(i1.to_string(), Box::new(ExprT::Unctor(i2, Box::new(normalize(&e2)))))}
+        },
+        _ => expr.clone()
+      }
+    },
+    ExprT::Unctor(i1, e1) => {
+      match *e1.clone() {
+        ExprT::Ctor(i2, e2) => {
+          if i1.eq(&i2) { return normalize(&e2); } 
+          else { return ExprT::Unctor(i1.to_string(), Box::new(ExprT::Ctor(i2, Box::new(normalize(&e2)))))}
+        },
+        _ => expr.clone()
+      }
+    },
+    ExprT::App(e1, e2) => ExprT::App(Box::new(normalize(e1)), Box::new(normalize(e2))),
+    ExprT::Func(p, e) => ExprT::Func(p.clone(), Box::new(normalize(e))),
+    //ExprT::Match(e, pats) => ExprT::Match(Box::new(normalize(e)), pats.iter().map(|(p, e1)| (p, normalize(e1))).collect()),
+    ExprT::Tuple(es) => ExprT::Tuple(es.iter().map(|x| normalize(x)).collect()),
+    ExprT::Proj(i, e) => ExprT::Proj(*i, Box::new(normalize(e))),
+    _ => ExprT::Wildcard
+  }
+}
+
 pub fn count_recursions(e: &ExprT) -> i32 {
   let num = match e {
       ExprT::Var(i) => {

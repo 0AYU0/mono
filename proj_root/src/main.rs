@@ -1,12 +1,12 @@
 mod expr;
 mod types;
 mod specification;
-mod bool_impl;
+mod list_length;
 mod generator;
 mod typecheck;
 use crate::expr::{*};
 use crate::expr::ExprT::{*, self};
-use crate::bool_impl::{*};
+use crate::list_length::{*};
 use crate::types::T::{*, self};
 use crate::specification::{*};
 use crate::generator::{*};
